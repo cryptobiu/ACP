@@ -27,9 +27,8 @@
 
 #include "cc_coin_toss.h"
 
-void test_tcp_mesh_coin_toss(const unsigned int id, const unsigned int count, const char * party_file, std::vector<u_int8_t> & /*random*/)
+void test_tcp_mesh_coin_toss(const unsigned int id, const unsigned int count, const char * party_file, const size_t rounds)
 {
-	const size_t rounds = 1000;
 	cc_coin_toss cct;
 	if(0 != cct.run(id, count, party_file, rounds))
 		syslog(LOG_ERR, "%s: %lu round tcp mesh coin toss test failed.", __FUNCTION__, rounds);

@@ -6,4 +6,9 @@ comm_client/libcommclient.so
 
 coin_toss/.cproject
 coin_toss/.project
+coin_toss/CMakeCache.txt
+coin_toss/CMakeFiles/
+coin_toss/Makefile
+coin_toss/cmake_install.cmake
+coin_toss/cointoss
 

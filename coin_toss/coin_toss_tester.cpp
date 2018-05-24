@@ -17,16 +17,25 @@
 #include "coin_toss_test.h"
 #include "cct_proxy_service.h"
 
+void get_options(int argc, char *argv[], size_t & parties, std::string & conf_file, size_t & rounds);
+void show_usage(const char * prog);
+
 void run_comm_client_test_thread();
-void run_comm_tcp_mesh_client_test_fork();
+void run_comm_tcp_mesh_client_test_fork(const size_t parties, const std::string & conf_file, const size_t rounds);
 void run_comm_tcp_proxy_client_test_fork();
 void run_comm_client_test_single();
 void run_comm_client_tcp_proxy_svc_test_single();
 
-int main() {
+int main(int argc, char *argv[]) {
+
+	size_t parties, rounds;
+	std::string conf_file;
+
+	get_options(argc, argv, parties, conf_file, rounds);
+
 	std::cout << "!!!Hello World!!!" << std::endl; // prints !!!Hello World!!!
 
-	run_comm_tcp_mesh_client_test_fork();
+	run_comm_tcp_mesh_client_test_fork(parties, conf_file, rounds);
 	//run_comm_tcp_proxy_client_test_fork();
 	//run_comm_client_test_thread();
 	//run_comm_client_test_single();
@@ -37,21 +46,63 @@ int main() {
 
 //******************************************************************************************//
 
-void run_comm_tcp_mesh_client_test_fork()
+void get_options(int argc, char *argv[], size_t & parties, std::string & conf_file, size_t & rounds)
 {
-	static const size_t count = 25;
-	static const char * party_file = "/home/ranp/workspace_other/parties_500.txt";
-	std::vector<u_int8_t> random;
+	if(argc == 1)
+	{
+		show_usage(argv[0]);
+		exit(0);
+	}
+	int opt;
+	while ((opt = getopt(argc, argv, "hn:f:r:")) != -1)
+	{
+		switch (opt)
+		{
+		case 'h':
+			show_usage(argv[0]);
+			exit(0);
+		case 'n':
+			parties = (size_t)strtol(optarg, NULL, 10);
+			break;
+		case 'f':
+			conf_file = optarg;
+			break;
+		case 'r':
+			rounds = (size_t)strtol(optarg, NULL, 10);
+			break;
+		default:
+			std::cerr << "Invalid program arguments." << std::endl;
+			show_usage(argv[0]);
+			exit(__LINE__);
+		}
+	}
+}
+
+//******************************************************************************************//
+
+void show_usage(const char * prog)
+{
+	std::cout << "Usage:" << std::endl;
+	std::cout << prog << "   [ OPTIONS ]" << std::endl;
+	std::cout << "-n   number of parties" << std::endl;
+	std::cout << "-f   peer address file" << std::endl;
+	std::cout << "-r   number of rounds" << std::endl;
+}
+
+//******************************************************************************************//
+
+void run_comm_tcp_mesh_client_test_fork(const size_t parties, const std::string & conf_file, const size_t rounds)
+{
 	pid_t cpid;
 
 	std::set<pid_t> children_of_the_revolution;
 
-	for(size_t i = 0; i < count; i++)
+	for(size_t i = 0; i < parties; i++)
 	{
 		switch(cpid = fork())
 		{
 		case 0:
-			test_tcp_mesh_coin_toss(i, count, party_file, random);
+			test_tcp_mesh_coin_toss(i, parties, conf_file.c_str(), rounds);
 			exit(0);
 		case -1:
 			{
@@ -152,7 +203,7 @@ typedef struct
 {
 	size_t count, id;
 	std::string party_file;
-	std::vector<u_int8_t> random;
+	size_t rounds;
 }param_t;
 
 void * test_proc(void *);
@@ -172,7 +223,6 @@ void run_comm_client_test_thread()
 		params[i].count = THDCNT;
 		params[i].id = i;
 		params[i].party_file = "/home/ranp/workspace_other/parties_3.txt";
-		params[i].random.clear();
 
 		if(0 == (retcode = pthread_create((threads + i), NULL, test_proc, (params + i))))
 			std::cout << "Test thread " << i << " launched." << std::endl;
@@ -217,7 +267,7 @@ void run_comm_client_test_thread()
 void * test_proc(void * arg)
 {
 	param_t * prm = (param_t *)arg;
-	test_tcp_mesh_coin_toss(prm->id, prm->count, prm->party_file.c_str(), prm->random);
+	test_tcp_mesh_coin_toss(prm->id, prm->count, prm->party_file.c_str(), prm->rounds);
 	return NULL;
 }
 
@@ -225,8 +275,7 @@ void * test_proc(void * arg)
 
 void run_comm_client_test_single()
 {
-	std::vector<u_int8_t> random;
-	test_tcp_mesh_coin_toss(0, 3, "/home/ranp/workspace_other/parties_3.txt", random);
+	test_tcp_mesh_coin_toss(0, 3, "/home/ranp/workspace_other/parties_3.txt", 3);
 }
 
 //******************************************************************************************//
