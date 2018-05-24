@@ -20,10 +20,12 @@
 #include "coin_toss_test.h"
 
 #include "comm_client_cb_api.h"
-#include "comm_client.h"
-#include "comm_client_tcp_mesh.h"
-#include "cct_proxy_client.h"
-#include "cct_proxy_service.h"
+#include "ac_protocol.h"
+
+//#include "comm_client.h"
+//#include "comm_client_tcp_mesh.h"
+//#include "cct_proxy_client.h"
+//#include "cct_proxy_service.h"
 
 #include "cc_coin_toss.h"
 
@@ -36,14 +38,12 @@ void test_tcp_mesh_coin_toss(const unsigned int id, const unsigned int count, co
 		syslog(LOG_NOTICE, "%s: %lu round tcp mesh coin toss test succeeded.", __FUNCTION__, rounds);
 }
 
+/*
 void test_tcp_proxy_coin_toss(const char * proxy_ip, const u_int16_t proxy_port, const unsigned int id,
 							  const unsigned int count, const char * party_file, std::vector<u_int8_t> & random)
 {
-	/*
-	comm_client_coin_toss tosser;
-	tosser.run_tcp_proxy_clent_coin_toss(proxy_ip, proxy_port, id, count, party_file, random);
-	*/
-
+	//comm_client_coin_toss tosser;
+	//tosser.run_tcp_proxy_clent_coin_toss(proxy_ip, proxy_port, id, count, party_file, random);
 }
 
 void test_tcp_proxy_server(const char * proxy_ip, const u_int16_t proxy_port, const unsigned int id, const unsigned int count, const char * party_file)
@@ -60,3 +60,4 @@ void test_tcp_proxy_server(const char * proxy_ip, const u_int16_t proxy_port, co
 	cct_proxy_service srvr;
 	srvr.serve(svc, clnt);
 }
+*/

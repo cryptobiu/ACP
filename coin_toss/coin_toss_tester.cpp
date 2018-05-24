@@ -20,11 +20,11 @@
 void get_options(int argc, char *argv[], size_t & parties, std::string & conf_file, size_t & rounds);
 void show_usage(const char * prog);
 
-void run_comm_client_test_thread();
 void run_comm_tcp_mesh_client_test_fork(const size_t parties, const std::string & conf_file, const size_t rounds);
-void run_comm_tcp_proxy_client_test_fork();
-void run_comm_client_test_single();
-void run_comm_client_tcp_proxy_svc_test_single();
+//void run_comm_tcp_proxy_client_test_fork();
+//void run_comm_client_test_single();
+//void run_comm_client_tcp_proxy_svc_test_single();
+//void run_comm_client_test_thread();
 
 int main(int argc, char *argv[]) {
 
@@ -122,7 +122,7 @@ void run_comm_tcp_mesh_client_test_fork(const size_t parties, const std::string 
 }
 
 //******************************************************************************************//
-
+/*
 void run_comm_tcp_proxy_client_test_fork()
 {
 	static const size_t count = 20;
@@ -196,9 +196,9 @@ void run_comm_tcp_proxy_client_test_fork()
 	for(std::set<pid_t>::iterator i = proxy_srvrs.begin(); i != proxy_srvrs.end(); ++i)
 		kill(*i, 9);
 }
-
+*/
 //******************************************************************************************//
-
+/*
 typedef struct
 {
 	size_t count, id;
@@ -270,16 +270,16 @@ void * test_proc(void * arg)
 	test_tcp_mesh_coin_toss(prm->id, prm->count, prm->party_file.c_str(), prm->rounds);
 	return NULL;
 }
-
+*/
 //******************************************************************************************//
-
+/*
 void run_comm_client_test_single()
 {
 	test_tcp_mesh_coin_toss(0, 3, "/home/ranp/workspace_other/parties_3.txt", 3);
 }
-
+*/
 //******************************************************************************************//
-
+/*
 void run_comm_client_tcp_proxy_svc_test_single()
 {
 	cct_proxy_service::client_t clnt;
@@ -295,6 +295,6 @@ void run_comm_client_tcp_proxy_svc_test_single()
 	proxy.serve(svc, clnt);
 
 }
-
+*/
 //******************************************************************************************//
 

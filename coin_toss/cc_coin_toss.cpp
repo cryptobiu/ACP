@@ -19,6 +19,7 @@
 #include <event2/event.h>
 
 #include "comm_client_cb_api.h"
+#include "ac_protocol.h"
 #include "comm_client.h"
 #include "cc_coin_toss.h"
 #include "comm_client_tcp_mesh.h"
@@ -27,56 +28,11 @@
 #define SEED_BYTE_SIZE			16
 
 cc_coin_toss::cc_coin_toss()
-: m_cc(new comm_client_tcp_mesh), m_id(-1), m_parties(0), m_rounds(0), m_run_flag(false)
 {
-	int errcode = 0;
-	if(0 != (errcode = pthread_mutex_init(&m_q_lock, NULL)))
-	{
-        char errmsg[256];
-        syslog(LOG_ERR, "%s: pthread_mutex_init() failed with error %d : [%s].",
-        		__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
-        exit(__LINE__);
-	}
-	if(0 != (errcode = pthread_mutex_init(&m_e_lock, NULL)))
-	{
-        char errmsg[256];
-        syslog(LOG_ERR, "%s: pthread_mutex_init() failed with error %d : [%s].",
-        		__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
-        exit(__LINE__);
-	}
-	if(0 != (errcode = pthread_cond_init(&m_comm_e, NULL)))
-	{
-        char errmsg[256];
-        syslog(LOG_ERR, "%s: pthread_cond_init() failed with error %d : [%s].",
-        		__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
-        exit(__LINE__);
-	}
 }
 
 cc_coin_toss::~cc_coin_toss()
 {
-	int errcode = 0;
-	if(0 != (errcode = pthread_cond_destroy(&m_comm_e)))
-	{
-        char errmsg[256];
-        syslog(LOG_ERR, "%s: pthread_cond_destroy() failed with error %d : [%s].",
-        		__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
-        exit(__LINE__);
-	}
-	if(0 != (errcode = pthread_mutex_destroy(&m_e_lock)))
-	{
-        char errmsg[256];
-        syslog(LOG_ERR, "%s: pthread_mutex_destroy() failed with error %d : [%s].",
-        		__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
-        exit(__LINE__);
-	}
-	if(0 != (errcode = pthread_mutex_destroy(&m_q_lock)))
-	{
-        char errmsg[256];
-        syslog(LOG_ERR, "%s: pthread_mutex_destroy() failed with error %d : [%s].",
-        		__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
-        exit(__LINE__);
-	}
 }
 
 int cc_coin_toss::run(const size_t id, const size_t parties, const char * conf_file, const size_t rounds, const size_t idle_timeout_seconds)
@@ -85,16 +41,9 @@ int cc_coin_toss::run(const size_t id, const size_t parties, const char * conf_f
 	m_parties = parties;
 	m_conf_file = conf_file;
 	m_rounds = rounds;
-	m_toss_outcomes.clear();
-	m_party_states.clear();
-	m_party_states.resize(m_parties);
 	m_comm_q.clear();
 
-	if(0 != generate_data(m_id, m_party_states[m_id].seed, m_party_states[m_id].commit))
-	{
-		syslog(LOG_ERR, "%s: self data generation failed; toss failure.", __FUNCTION__);
-		return -1;
-	}
+	pre_run();
 
 	if(0 != m_cc->start(id, parties, conf_file, this))
 	{
@@ -154,6 +103,26 @@ int cc_coin_toss::run(const size_t id, const size_t parties, const char * conf_f
 	}
 
 	m_cc->stop();
+	post_run();
+	return 0;
+}
+
+int cc_coin_toss::pre_run()
+{
+	m_toss_outcomes.clear();
+	m_party_states.clear();
+	m_party_states.resize(m_parties);
+
+	if(0 != generate_data(m_id, m_party_states[m_id].seed, m_party_states[m_id].commit))
+	{
+		syslog(LOG_ERR, "%s: self data generation failed; toss failure.", __FUNCTION__);
+		return -1;
+	}
+	return 0;
+}
+
+int cc_coin_toss::post_run()
+{
 	m_party_states.clear();
 	for(std::list< comm_evt * >::iterator i = m_comm_q.begin(); i != m_comm_q.end(); ++i)
 		delete (*i);
@@ -238,166 +207,6 @@ int cc_coin_toss::valid_seed(const size_t id, const std::vector<u_int8_t> & seed
 	if(0 == memcmp(control_commit.data(), commit.data(), SHA256_BYTE_SIZE))
 		return 0;
 	return -1;
-}
-
-void cc_coin_toss::push_comm_event(comm_evt * evt)
-{
-	int errcode;
-	struct timespec to;
-	clock_gettime(CLOCK_REALTIME, &to);
-	to.tv_sec += 2;
-	if(0 == (errcode = pthread_mutex_timedlock(&m_q_lock, &to)))
-	{
-		m_comm_q.push_back(evt);
-
-		if(0 != (errcode = pthread_mutex_unlock(&m_q_lock)))
-		{
-			char errmsg[256];
-			syslog(LOG_ERR, "%s: pthread_mutex_unlock() failed with error %d : [%s].",
-					__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
-			exit(__LINE__);
-		}
-
-		clock_gettime(CLOCK_REALTIME, &to);
-		to.tv_sec += 2;
-		if(0 == (errcode = pthread_mutex_timedlock(&m_e_lock, &to)))
-		{
-			if(0 != (errcode = pthread_cond_signal(&m_comm_e)))
-			{
-				char errmsg[256];
-				syslog(LOG_ERR, "%s: pthread_cond_signal() failed with error %d : [%s].",
-						__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
-				exit(__LINE__);
-			}
-
-			if(0 != (errcode = pthread_mutex_unlock(&m_e_lock)))
-			{
-				char errmsg[256];
-				syslog(LOG_ERR, "%s: pthread_mutex_unlock() failed with error %d : [%s].",
-						__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
-				exit(__LINE__);
-			}
-		}
-		else
-		{
-			char errmsg[256];
-			syslog(LOG_ERR, "%s: pthread_mutex_timedlock() failed with error %d : [%s].",
-					__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
-			exit(__LINE__);
-		}
-	}
-	else
-	{
-		char errmsg[256];
-		syslog(LOG_ERR, "%s: pthread_mutex_timedlock() failed with error %d : [%s].",
-				__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
-		exit(__LINE__);
-	}
-}
-
-void cc_coin_toss::report_party_comm(const size_t party_id, const bool comm)
-{
-	comm_conn_evt * pevt = new comm_conn_evt;
-	pevt->type = comm_evt_conn;
-	pevt->party_id = party_id;
-	pevt->connected = comm;
-	push_comm_event(pevt);
-}
-
-void cc_coin_toss::on_comm_up_with_party(const unsigned int party_id)
-{
-	report_party_comm(party_id, true);
-}
-
-void cc_coin_toss::on_comm_down_with_party(const unsigned int party_id)
-{
-	report_party_comm(party_id, false);
-}
-
-void cc_coin_toss::on_comm_message(const unsigned int src_id, const unsigned char * msg, const size_t size)
-{
-	comm_msg_evt * pevt = new comm_msg_evt;
-	pevt->type = comm_evt_msg;
-	pevt->party_id = src_id;
-	pevt->msg.assign(msg, msg + size);
-	push_comm_event(pevt);
-}
-
-bool cc_coin_toss::handle_comm_events()
-{
-	std::list< comm_evt * > all_comm_evts;
-
-	int errcode;
-	struct timespec to;
-	clock_gettime(CLOCK_REALTIME, &to);
-	to.tv_sec += 2;
-	if(0 == (errcode = pthread_mutex_timedlock(&m_q_lock, &to)))
-	{
-		all_comm_evts.swap(m_comm_q);
-
-		if(0 != (errcode = pthread_mutex_unlock(&m_q_lock)))
-		{
-			char errmsg[256];
-			syslog(LOG_ERR, "%s: pthread_mutex_unlock() failed with error %d : [%s].",
-					__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
-			exit(__LINE__);
-		}
-	}
-	else
-	{
-		char errmsg[256];
-		syslog(LOG_ERR, "%s: pthread_mutex_timedlock() failed with error %d : [%s].",
-				__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
-		exit(__LINE__);
-	}
-
-	for(std::list< comm_evt * >::iterator i = all_comm_evts.begin(); i != all_comm_evts.end() && m_run_flag; ++i)
-		handle_comm_event(*i);
-
-	for(std::list< comm_evt * >::iterator i = all_comm_evts.begin(); i != all_comm_evts.end(); ++i)
-		delete (*i);
-
-	return (!all_comm_evts.empty());
-}
-
-void cc_coin_toss::handle_comm_event(comm_evt * evt)
-{
-	if(evt->party_id >= m_parties || evt->party_id == m_id)
-	{
-		syslog(LOG_ERR, "%s: invalid party id %u.", __FUNCTION__, evt->party_id);
-		return;
-	}
-
-	switch(evt->type)
-	{
-	case comm_evt_conn:
-		handle_conn_event(evt);
-		break;
-	case comm_evt_msg:
-		handle_msg_event(evt);
-		break;
-	default:
-		syslog(LOG_ERR, "%s: invalid comm event type %u", __FUNCTION__, evt->type);
-		break;
-	}
-}
-
-void cc_coin_toss::handle_conn_event(comm_evt * evt)
-{
-	comm_conn_evt * conn_evt = dynamic_cast<comm_conn_evt *>(evt);
-	if(NULL != conn_evt)
-		handle_party_conn(conn_evt->party_id, conn_evt->connected);
-	else
-		syslog(LOG_ERR, "%s: invalid event type cast.", __FUNCTION__);
-}
-
-void cc_coin_toss::handle_msg_event(comm_evt * evt)
-{
-	comm_msg_evt * msg_evt = dynamic_cast<comm_msg_evt *>(evt);
-	if(NULL != msg_evt)
-		handle_party_msg(msg_evt->party_id, msg_evt->msg);
-	else
-		syslog(LOG_ERR, "%s: invalid event type cast.", __FUNCTION__);
 }
 
 void cc_coin_toss::handle_party_conn(const size_t party_id, const bool connected)

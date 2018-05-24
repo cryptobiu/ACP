@@ -7,7 +7,8 @@ INCLUDE_DIRECTORIES(
 	$ENV{HOME}/ACP/comm_client
 )
 
-set(SOURCE_FILES 
+set(SOURCE_FILES
+	ac_protocol.cpp
 	cc_coin_toss.cpp
 	coin_toss_test.cpp
 	coin_toss_tester.cpp
