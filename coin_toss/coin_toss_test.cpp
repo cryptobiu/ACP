@@ -30,7 +30,7 @@
 void test_tcp_mesh_coin_toss(const unsigned int id, const unsigned int count, const char * party_file, const size_t rounds)
 {
 	cc_coin_toss cct;
-	if(0 != cct.run(id, count, party_file, rounds))
+	if(0 != cct.run(id, count, party_file, rounds, 60))
 		syslog(LOG_ERR, "%s: %lu round tcp mesh coin toss test failed.", __FUNCTION__, rounds);
 	else
 		syslog(LOG_NOTICE, "%s: %lu round tcp mesh coin toss test succeeded.", __FUNCTION__, rounds);

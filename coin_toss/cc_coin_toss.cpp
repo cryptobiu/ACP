@@ -79,7 +79,7 @@ cc_coin_toss::~cc_coin_toss()
 	}
 }
 
-int cc_coin_toss::run(const size_t id, const size_t parties, const char * conf_file, const size_t rounds)
+int cc_coin_toss::run(const size_t id, const size_t parties, const char * conf_file, const size_t rounds, const size_t idle_timeout_seconds)
 {
 	m_id = id;
 	m_parties = parties;
@@ -103,8 +103,9 @@ int cc_coin_toss::run(const size_t id, const size_t parties, const char * conf_f
 	}
 
 	int errcode;
-	struct timespec to;
+	struct timespec to, idle_since, now;
 	m_run_flag = true;
+	clock_gettime(CLOCK_REALTIME, &idle_since);
 	while(m_run_flag)
 	{
 		clock_gettime(CLOCK_REALTIME, &to);
@@ -129,8 +130,20 @@ int cc_coin_toss::run(const size_t id, const size_t parties, const char * conf_f
 				exit(__LINE__);
 			}
 
-			handle_comm_events();
-			while(m_run_flag && run_around() && round_up());
+			if(handle_comm_events())
+			{
+				clock_gettime(CLOCK_REALTIME, &idle_since);
+				while(m_run_flag && run_around() && round_up());
+			}
+			else
+			{
+				clock_gettime(CLOCK_REALTIME, &now);
+				if(idle_timeout_seconds < (now.tv_sec - idle_since.tv_sec))
+				{
+					syslog(LOG_ERR, "%s: idle timeout %lu reached; toss failed.", __FUNCTION__, idle_timeout_seconds);
+					m_run_flag = false;
+				}
+			}
 		}
 		else
 		{
@@ -310,7 +323,7 @@ void cc_coin_toss::on_comm_message(const unsigned int src_id, const unsigned cha
 	push_comm_event(pevt);
 }
 
-void cc_coin_toss::handle_comm_events()
+bool cc_coin_toss::handle_comm_events()
 {
 	std::list< comm_evt * > all_comm_evts;
 
@@ -344,7 +357,7 @@ void cc_coin_toss::handle_comm_events()
 	for(std::list< comm_evt * >::iterator i = all_comm_evts.begin(); i != all_comm_evts.end(); ++i)
 		delete (*i);
 
-	all_comm_evts.clear();
+	return (!all_comm_evts.empty());
 }
 
 void cc_coin_toss::handle_comm_event(comm_evt * evt)

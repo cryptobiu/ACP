@@ -52,7 +52,7 @@ class cc_coin_toss : public comm_client_cb_api
 	pthread_mutex_t m_q_lock, m_e_lock;
 
 	bool m_run_flag;
-	void handle_comm_events();
+	bool handle_comm_events();
 	void handle_comm_event(comm_evt * evt);
 	void handle_conn_event(comm_evt * evt);
 	void handle_msg_event(comm_evt * evt);
@@ -74,7 +74,7 @@ public:
 	cc_coin_toss();
 	virtual ~cc_coin_toss();
 
-	int run(const size_t id, const size_t parties, const char * conf_file, const size_t rounds);
+	int run(const size_t id, const size_t parties, const char * conf_file, const size_t rounds, const size_t idle_timeout_seconds);
 
 	virtual void on_comm_up_with_party(const unsigned int party_id);
 	virtual void on_comm_down_with_party(const unsigned int party_id);
