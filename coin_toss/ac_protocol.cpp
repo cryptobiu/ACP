@@ -168,7 +168,7 @@ int ac_protocol::run(const size_t id, const size_t parties, const char * conf_fi
 
 	if(0 != m_cc->start(id, parties, conf_file, this))
 	{
-		LC.error("%s: comm client start failed; toss failure.", __FUNCTION__);
+		LC.error("%s: comm client start failed; run failure.", __FUNCTION__);
 		return -1;
 	}
 
@@ -210,7 +210,7 @@ int ac_protocol::run(const size_t id, const size_t parties, const char * conf_fi
 				clock_gettime(CLOCK_REALTIME, &now);
 				if(idle_timeout_seconds < (now.tv_sec - idle_since.tv_sec))
 				{
-					LC.error("%s: idle timeout %lu reached; toss failed.", __FUNCTION__, idle_timeout_seconds);
+					LC.error("%s: idle timeout %lu reached; run failed.", __FUNCTION__, idle_timeout_seconds);
 					m_run_flag = false;
 				}
 			}
