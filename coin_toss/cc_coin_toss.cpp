@@ -40,74 +40,8 @@ cc_coin_toss::~cc_coin_toss()
 
 int cc_coin_toss::run(const size_t id, const size_t parties, const char * conf_file, const size_t rounds, const size_t idle_timeout_seconds)
 {
-	m_id = id;
-	m_parties = parties;
-	m_conf_file = conf_file;
 	m_rounds = rounds;
-	m_comm_q.clear();
-
-	pre_run();
-
-	if(0 != m_cc->start(id, parties, conf_file, this))
-	{
-		LC.error("%s: comm client start failed; toss failure.", __FUNCTION__);
-		return -1;
-	}
-
-	int errcode;
-	struct timespec to, idle_since, now;
-	m_run_flag = true;
-	clock_gettime(CLOCK_REALTIME, &idle_since);
-	while(m_run_flag)
-	{
-		clock_gettime(CLOCK_REALTIME, &to);
-		to.tv_sec += 1;
-		if(0 == (errcode = pthread_mutex_timedlock(&m_e_lock, &to)))
-		{
-			clock_gettime(CLOCK_REALTIME, &to);
-			to.tv_sec += 1;
-			if(0 != (errcode = pthread_cond_timedwait(&m_comm_e, &m_e_lock, &to)) && ETIMEDOUT != errcode)
-			{
-				char errmsg[256];
-				LC.error("%s: pthread_cond_timedwait() failed with error %d : [%s].",
-						__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
-				exit(__LINE__);
-			}
-
-			if(0 != (errcode = pthread_mutex_unlock(&m_e_lock)))
-			{
-				char errmsg[256];
-				LC.error("%s: pthread_mutex_unlock() failed with error %d : [%s].",
-						__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
-				exit(__LINE__);
-			}
-
-			if(handle_comm_events())
-			{
-				clock_gettime(CLOCK_REALTIME, &idle_since);
-				while(m_run_flag && run_around() && round_up());
-			}
-			else
-			{
-				clock_gettime(CLOCK_REALTIME, &now);
-				if(idle_timeout_seconds < (now.tv_sec - idle_since.tv_sec))
-				{
-					LC.error("%s: idle timeout %lu reached; toss failed.", __FUNCTION__, idle_timeout_seconds);
-					m_run_flag = false;
-				}
-			}
-		}
-		else
-		{
-	        char errmsg[256];
-	        LC.error("%s: pthread_mutex_timedlock() failed with error %d : [%s].",
-	        		__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
-		}
-	}
-
-	m_cc->stop();
-	post_run();
-	return 0;
+	return ac_protocol::run(id, parties, conf_file, idle_timeout_seconds);
 }
 
 int cc_coin_toss::pre_run()
@@ -127,9 +61,6 @@ int cc_coin_toss::pre_run()
 int cc_coin_toss::post_run()
 {
 	m_party_states.clear();
-	for(std::list< comm_evt * >::iterator i = m_comm_q.begin(); i != m_comm_q.end(); ++i)
-		delete (*i);
-	m_comm_q.clear();
 
 	if(m_toss_outcomes.size() != m_rounds)
 	{

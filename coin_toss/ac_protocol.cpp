@@ -17,7 +17,7 @@
 #define LC log4cpp::Category::getInstance(m_logcat)
 
 ac_protocol::ac_protocol(const char * log_category)
-: m_logcat(log_category), m_cc(new comm_client_tcp_mesh(((m_logcat + '.') + "ctm").c_str())), m_id(-1), m_parties(0), m_rounds(0), m_run_flag(false)
+: m_logcat(log_category), m_cc(new comm_client_tcp_mesh(((m_logcat + '.') + "ctm").c_str())), m_id(-1), m_parties(0), m_run_flag(false)
 {
 	int errcode = 0;
 	if(0 != (errcode = pthread_mutex_init(&m_q_lock, NULL)))
@@ -153,12 +153,11 @@ void ac_protocol::on_comm_message(const unsigned int src_id, const unsigned char
 	push_comm_event(pevt);
 }
 
-int ac_protocol::run(const size_t id, const size_t parties, const char * conf_file, const size_t rounds, const size_t idle_timeout_seconds)
+int ac_protocol::run(const size_t id, const size_t parties, const char * conf_file, const size_t idle_timeout_seconds)
 {
 	m_id = id;
 	m_parties = parties;
 	m_conf_file = conf_file;
-	m_rounds = rounds;
 	m_comm_q.clear();
 
 	if(0 != pre_run())
@@ -224,6 +223,9 @@ int ac_protocol::run(const size_t id, const size_t parties, const char * conf_fi
 		}
 	}
 	m_cc->stop();
+	for(std::list< comm_evt * >::iterator i = m_comm_q.begin(); i != m_comm_q.end(); ++i)
+		delete (*i);
+	m_comm_q.clear();
 	if(0 != post_run())
 	{
 		LC.error("%s: post-run processing failure.", __FUNCTION__);

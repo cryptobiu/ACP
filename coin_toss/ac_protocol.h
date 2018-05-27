@@ -8,7 +8,7 @@ class ac_protocol : public comm_client_cb_api
 protected:
 	std::string m_logcat;
 	comm_client * m_cc;
-	size_t m_id, m_parties, m_rounds;
+	size_t m_id, m_parties;
 	std::string m_conf_file;
 	bool m_run_flag;
 
@@ -58,7 +58,7 @@ public:
 	ac_protocol(const char * log_category);
 	virtual ~ac_protocol();
 
-	virtual int run(const size_t id, const size_t parties, const char * conf_file, const size_t rounds, const size_t idle_timeout_seconds);
+	virtual int run(const size_t id, const size_t parties, const char * conf_file, const size_t idle_timeout_seconds);
 
 	virtual void on_comm_up_with_party(const unsigned int party_id);
 	virtual void on_comm_down_with_party(const unsigned int party_id);

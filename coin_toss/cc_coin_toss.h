@@ -3,7 +3,7 @@
 
 class cc_coin_toss : public ac_protocol
 {
-
+	size_t m_rounds;
 	std::list< std::vector< u_int8_t > > m_toss_outcomes;
 
 	typedef enum
