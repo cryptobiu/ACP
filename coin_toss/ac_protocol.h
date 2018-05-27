@@ -55,7 +55,7 @@ protected:
 	virtual int post_run() = 0;
 
 public:
-	ac_protocol(const char * log_category = "acp");
+	ac_protocol(const char * log_category);
 	virtual ~ac_protocol();
 
 	virtual int run(const size_t id, const size_t parties, const char * conf_file, const size_t rounds, const size_t idle_timeout_seconds);

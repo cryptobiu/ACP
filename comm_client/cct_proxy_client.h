@@ -33,7 +33,7 @@ class cct_proxy_client : public comm_client
 	int process_messages();
 
 public:
-	cct_proxy_client(const char * proxy_addr, const u_int16_t proxy_port, const char * log_category = "cpc");
+	cct_proxy_client(const char * proxy_addr, const u_int16_t proxy_port, const char * log_category);
 	virtual ~cct_proxy_client();
 
 	int start(const unsigned int id, const unsigned int peer_count, const char * comm_conf_file, comm_client_cb_api * sink);

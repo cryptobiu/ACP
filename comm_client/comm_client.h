@@ -22,7 +22,7 @@ protected:
 	void set_run_flag(bool);
 
 public:
-	comm_client(const char * log_category = "cc");
+	comm_client(const char * log_category);
 	virtual ~comm_client();
 
 	virtual int start(const unsigned int id, const unsigned int peer_count, const char * comm_conf_file, comm_client_cb_api * sink);

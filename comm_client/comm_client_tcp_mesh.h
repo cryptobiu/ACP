@@ -42,7 +42,7 @@ class comm_client_tcp_mesh : public comm_client
 	void on_read(int fd, short what, void * arg);
 
 public:
-	comm_client_tcp_mesh(const char * log_category = "tmc");
+	comm_client_tcp_mesh(const char * log_category);
 	virtual ~comm_client_tcp_mesh();
 
 	virtual int start(const unsigned int id, const unsigned int peer_count, const char * comm_conf_file, comm_client_cb_api * sink);

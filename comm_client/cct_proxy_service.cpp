@@ -200,7 +200,7 @@ void cct_proxy_service::on_accept()
 							if((ssize_t)sizeof(proxy_msg_t) == nwrit)
 							{
 					    		LC.debug("%s: proxy client details written to conn.", __FUNCTION__);
-								m_cc = new comm_client_tcp_mesh;
+								m_cc = new comm_client_tcp_mesh((m_logcat + ".cctm").c_str());
 								if(0 == m_cc->start(m_clnt.id, m_clnt.count, m_clnt.conf_file.c_str(), this))
 								{
 									event_del(m_tcp);
