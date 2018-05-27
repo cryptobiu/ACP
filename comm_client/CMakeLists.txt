@@ -7,6 +7,7 @@ INCLUDE_DIRECTORIES(
 )
 
 set(SOURCE_FILES
+	ac_protocol.cpp
 	cct_proxy_client.cpp
 	cct_proxy_service.cpp
 	comm_client.cpp
