@@ -35,12 +35,12 @@ class cc_coin_toss : public ac_protocol
 	bool round_up();
 	int post_run();
 
-	static int generate_data(const size_t id, std::vector<u_int8_t> & seed, std::vector<u_int8_t> & commit);
-	static int commit_seed(const size_t id, const std::vector<u_int8_t> & seed, std::vector<u_int8_t> & commit);
-	static int valid_seed(const size_t id, const std::vector<u_int8_t> & seed, const std::vector<u_int8_t> & commit);
+	int generate_data(const size_t id, std::vector<u_int8_t> & seed, std::vector<u_int8_t> & commit) const;
+	int commit_seed(const size_t id, const std::vector<u_int8_t> & seed, std::vector<u_int8_t> & commit) const;
+	int valid_seed(const size_t id, const std::vector<u_int8_t> & seed, const std::vector<u_int8_t> & commit) const;
 
 public:
-	cc_coin_toss();
+	cc_coin_toss(const char * log_category = "cct");
 	virtual ~cc_coin_toss();
 
 	int run(const size_t id, const size_t parties, const char * conf_file, const size_t rounds, const size_t idle_timeout_seconds);

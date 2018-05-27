@@ -7,10 +7,14 @@
 #include <vector>
 #include <list>
 
+#include <log4cpp/Category.hh>
+
 #include "comm_client_cb_api.h"
 #include "ac_protocol.h"
 #include "comm_client.h"
 #include "comm_client_tcp_mesh.h"
+
+#define LC log4cpp::Category::getInstance(m_logcat)
 
 ac_protocol::ac_protocol(const char * log_category)
 : m_logcat(log_category), m_cc(new comm_client_tcp_mesh(((m_logcat + '.') + "ctm").c_str())), m_id(-1), m_parties(0), m_rounds(0), m_run_flag(false)
@@ -19,21 +23,21 @@ ac_protocol::ac_protocol(const char * log_category)
 	if(0 != (errcode = pthread_mutex_init(&m_q_lock, NULL)))
 	{
         char errmsg[256];
-        syslog(LOG_ERR, "%s: pthread_mutex_init() failed with error %d : [%s].",
+        LC.error("%s: pthread_mutex_init() failed with error %d : [%s].",
         		__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
         exit(__LINE__);
 	}
 	if(0 != (errcode = pthread_mutex_init(&m_e_lock, NULL)))
 	{
         char errmsg[256];
-        syslog(LOG_ERR, "%s: pthread_mutex_init() failed with error %d : [%s].",
+        LC.error("%s: pthread_mutex_init() failed with error %d : [%s].",
         		__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
         exit(__LINE__);
 	}
 	if(0 != (errcode = pthread_cond_init(&m_comm_e, NULL)))
 	{
         char errmsg[256];
-        syslog(LOG_ERR, "%s: pthread_cond_init() failed with error %d : [%s].",
+        LC.error("%s: pthread_cond_init() failed with error %d : [%s].",
         		__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
         exit(__LINE__);
 	}
@@ -45,21 +49,21 @@ ac_protocol::~ac_protocol()
 	if(0 != (errcode = pthread_cond_destroy(&m_comm_e)))
 	{
         char errmsg[256];
-        syslog(LOG_ERR, "%s: pthread_cond_destroy() failed with error %d : [%s].",
+        LC.error("%s: pthread_cond_destroy() failed with error %d : [%s].",
         		__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
         exit(__LINE__);
 	}
 	if(0 != (errcode = pthread_mutex_destroy(&m_e_lock)))
 	{
         char errmsg[256];
-        syslog(LOG_ERR, "%s: pthread_mutex_destroy() failed with error %d : [%s].",
+        LC.error("%s: pthread_mutex_destroy() failed with error %d : [%s].",
         		__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
         exit(__LINE__);
 	}
 	if(0 != (errcode = pthread_mutex_destroy(&m_q_lock)))
 	{
         char errmsg[256];
-        syslog(LOG_ERR, "%s: pthread_mutex_destroy() failed with error %d : [%s].",
+        LC.error("%s: pthread_mutex_destroy() failed with error %d : [%s].",
         		__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
         exit(__LINE__);
 	}
@@ -79,7 +83,7 @@ void ac_protocol::push_comm_event(comm_evt * evt)
 		if(0 != (errcode = pthread_mutex_unlock(&m_q_lock)))
 		{
 			char errmsg[256];
-			syslog(LOG_ERR, "%s: pthread_mutex_unlock() failed with error %d : [%s].",
+			LC.error("%s: pthread_mutex_unlock() failed with error %d : [%s].",
 					__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
 			exit(__LINE__);
 		}
@@ -91,7 +95,7 @@ void ac_protocol::push_comm_event(comm_evt * evt)
 			if(0 != (errcode = pthread_cond_signal(&m_comm_e)))
 			{
 				char errmsg[256];
-				syslog(LOG_ERR, "%s: pthread_cond_signal() failed with error %d : [%s].",
+				LC.error("%s: pthread_cond_signal() failed with error %d : [%s].",
 						__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
 				exit(__LINE__);
 			}
@@ -99,7 +103,7 @@ void ac_protocol::push_comm_event(comm_evt * evt)
 			if(0 != (errcode = pthread_mutex_unlock(&m_e_lock)))
 			{
 				char errmsg[256];
-				syslog(LOG_ERR, "%s: pthread_mutex_unlock() failed with error %d : [%s].",
+				LC.error("%s: pthread_mutex_unlock() failed with error %d : [%s].",
 						__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
 				exit(__LINE__);
 			}
@@ -107,7 +111,7 @@ void ac_protocol::push_comm_event(comm_evt * evt)
 		else
 		{
 			char errmsg[256];
-			syslog(LOG_ERR, "%s: pthread_mutex_timedlock() failed with error %d : [%s].",
+			LC.error("%s: pthread_mutex_timedlock() failed with error %d : [%s].",
 					__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
 			exit(__LINE__);
 		}
@@ -115,7 +119,7 @@ void ac_protocol::push_comm_event(comm_evt * evt)
 	else
 	{
 		char errmsg[256];
-		syslog(LOG_ERR, "%s: pthread_mutex_timedlock() failed with error %d : [%s].",
+		LC.error("%s: pthread_mutex_timedlock() failed with error %d : [%s].",
 				__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
 		exit(__LINE__);
 	}
@@ -159,13 +163,13 @@ int ac_protocol::run(const size_t id, const size_t parties, const char * conf_fi
 
 	if(0 != pre_run())
 	{
-		syslog(LOG_ERR, "%s: run preliminary failure.", __FUNCTION__);
+		LC.error("%s: run preliminary failure.", __FUNCTION__);
 		return -1;
 	}
 
 	if(0 != m_cc->start(id, parties, conf_file, this))
 	{
-		syslog(LOG_ERR, "%s: comm client start failed; toss failure.", __FUNCTION__);
+		LC.error("%s: comm client start failed; toss failure.", __FUNCTION__);
 		return -1;
 	}
 
@@ -184,7 +188,7 @@ int ac_protocol::run(const size_t id, const size_t parties, const char * conf_fi
 			if(0 != (errcode = pthread_cond_timedwait(&m_comm_e, &m_e_lock, &to)) && ETIMEDOUT != errcode)
 			{
 				char errmsg[256];
-				syslog(LOG_ERR, "%s: pthread_cond_timedwait() failed with error %d : [%s].",
+				LC.error("%s: pthread_cond_timedwait() failed with error %d : [%s].",
 						__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
 				exit(__LINE__);
 			}
@@ -192,7 +196,7 @@ int ac_protocol::run(const size_t id, const size_t parties, const char * conf_fi
 			if(0 != (errcode = pthread_mutex_unlock(&m_e_lock)))
 			{
 				char errmsg[256];
-				syslog(LOG_ERR, "%s: pthread_mutex_unlock() failed with error %d : [%s].",
+				LC.error("%s: pthread_mutex_unlock() failed with error %d : [%s].",
 						__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
 				exit(__LINE__);
 			}
@@ -207,7 +211,7 @@ int ac_protocol::run(const size_t id, const size_t parties, const char * conf_fi
 				clock_gettime(CLOCK_REALTIME, &now);
 				if(idle_timeout_seconds < (now.tv_sec - idle_since.tv_sec))
 				{
-					syslog(LOG_ERR, "%s: idle timeout %lu reached; toss failed.", __FUNCTION__, idle_timeout_seconds);
+					LC.error("%s: idle timeout %lu reached; toss failed.", __FUNCTION__, idle_timeout_seconds);
 					m_run_flag = false;
 				}
 			}
@@ -215,14 +219,14 @@ int ac_protocol::run(const size_t id, const size_t parties, const char * conf_fi
 		else
 		{
 	        char errmsg[256];
-	        syslog(LOG_ERR, "%s: pthread_mutex_timedlock() failed with error %d : [%s].",
+	        LC.error("%s: pthread_mutex_timedlock() failed with error %d : [%s].",
 	        		__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
 		}
 	}
 	m_cc->stop();
 	if(0 != post_run())
 	{
-		syslog(LOG_ERR, "%s: post-run processing failure.", __FUNCTION__);
+		LC.error("%s: post-run processing failure.", __FUNCTION__);
 		return -1;
 	}
 	return 0;
@@ -243,7 +247,7 @@ bool ac_protocol::handle_comm_events()
 		if(0 != (errcode = pthread_mutex_unlock(&m_q_lock)))
 		{
 			char errmsg[256];
-			syslog(LOG_ERR, "%s: pthread_mutex_unlock() failed with error %d : [%s].",
+			LC.error("%s: pthread_mutex_unlock() failed with error %d : [%s].",
 					__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
 			exit(__LINE__);
 		}
@@ -251,7 +255,7 @@ bool ac_protocol::handle_comm_events()
 	else
 	{
 		char errmsg[256];
-		syslog(LOG_ERR, "%s: pthread_mutex_timedlock() failed with error %d : [%s].",
+		LC.error("%s: pthread_mutex_timedlock() failed with error %d : [%s].",
 				__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
 		exit(__LINE__);
 	}
@@ -269,7 +273,7 @@ void ac_protocol::handle_comm_event(comm_evt * evt)
 {
 	if(evt->party_id >= m_parties || evt->party_id == m_id)
 	{
-		syslog(LOG_ERR, "%s: invalid party id %u.", __FUNCTION__, evt->party_id);
+		LC.error("%s: invalid party id %u.", __FUNCTION__, evt->party_id);
 		return;
 	}
 
@@ -282,7 +286,7 @@ void ac_protocol::handle_comm_event(comm_evt * evt)
 		handle_msg_event(evt);
 		break;
 	default:
-		syslog(LOG_ERR, "%s: invalid comm event type %u", __FUNCTION__, evt->type);
+		LC.error("%s: invalid comm event type %u", __FUNCTION__, evt->type);
 		break;
 	}
 }
@@ -293,7 +297,7 @@ void ac_protocol::handle_conn_event(comm_evt * evt)
 	if(NULL != conn_evt)
 		handle_party_conn(conn_evt->party_id, conn_evt->connected);
 	else
-		syslog(LOG_ERR, "%s: invalid event type cast.", __FUNCTION__);
+		LC.error("%s: invalid event type cast.", __FUNCTION__);
 }
 
 void ac_protocol::handle_msg_event(comm_evt * evt)
@@ -302,5 +306,5 @@ void ac_protocol::handle_msg_event(comm_evt * evt)
 	if(NULL != msg_evt)
 		handle_party_msg(msg_evt->party_id, msg_evt->msg);
 	else
-		syslog(LOG_ERR, "%s: invalid event type cast.", __FUNCTION__);
+		LC.error("%s: invalid event type cast.", __FUNCTION__);
 }

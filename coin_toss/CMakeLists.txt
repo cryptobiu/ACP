@@ -22,6 +22,7 @@ add_executable(cointoss ${SOURCE_FILES})
 
 TARGET_LINK_LIBRARIES( cointoss
 	commclient
+	log4cpp
 	event
 	crypto
 	pthread

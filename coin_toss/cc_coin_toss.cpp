@@ -15,6 +15,7 @@
 
 #include <openssl/rand.h>
 #include <openssl/evp.h>
+#include <log4cpp/Category.hh>
 #include <event2/event.h>
 
 #include "comm_client_cb_api.h"
@@ -26,7 +27,10 @@
 #define SHA256_BYTE_SIZE		32
 #define SEED_BYTE_SIZE			16
 
-cc_coin_toss::cc_coin_toss()
+#define LC log4cpp::Category::getInstance(m_logcat)
+
+cc_coin_toss::cc_coin_toss(const char * log_category)
+: ac_protocol(log_category)
 {
 }
 
@@ -46,7 +50,7 @@ int cc_coin_toss::run(const size_t id, const size_t parties, const char * conf_f
 
 	if(0 != m_cc->start(id, parties, conf_file, this))
 	{
-		syslog(LOG_ERR, "%s: comm client start failed; toss failure.", __FUNCTION__);
+		LC.error("%s: comm client start failed; toss failure.", __FUNCTION__);
 		return -1;
 	}
 
@@ -65,7 +69,7 @@ int cc_coin_toss::run(const size_t id, const size_t parties, const char * conf_f
 			if(0 != (errcode = pthread_cond_timedwait(&m_comm_e, &m_e_lock, &to)) && ETIMEDOUT != errcode)
 			{
 				char errmsg[256];
-				syslog(LOG_ERR, "%s: pthread_cond_timedwait() failed with error %d : [%s].",
+				LC.error("%s: pthread_cond_timedwait() failed with error %d : [%s].",
 						__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
 				exit(__LINE__);
 			}
@@ -73,7 +77,7 @@ int cc_coin_toss::run(const size_t id, const size_t parties, const char * conf_f
 			if(0 != (errcode = pthread_mutex_unlock(&m_e_lock)))
 			{
 				char errmsg[256];
-				syslog(LOG_ERR, "%s: pthread_mutex_unlock() failed with error %d : [%s].",
+				LC.error("%s: pthread_mutex_unlock() failed with error %d : [%s].",
 						__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
 				exit(__LINE__);
 			}
@@ -88,7 +92,7 @@ int cc_coin_toss::run(const size_t id, const size_t parties, const char * conf_f
 				clock_gettime(CLOCK_REALTIME, &now);
 				if(idle_timeout_seconds < (now.tv_sec - idle_since.tv_sec))
 				{
-					syslog(LOG_ERR, "%s: idle timeout %lu reached; toss failed.", __FUNCTION__, idle_timeout_seconds);
+					LC.error("%s: idle timeout %lu reached; toss failed.", __FUNCTION__, idle_timeout_seconds);
 					m_run_flag = false;
 				}
 			}
@@ -96,7 +100,7 @@ int cc_coin_toss::run(const size_t id, const size_t parties, const char * conf_f
 		else
 		{
 	        char errmsg[256];
-	        syslog(LOG_ERR, "%s: pthread_mutex_timedlock() failed with error %d : [%s].",
+	        LC.error("%s: pthread_mutex_timedlock() failed with error %d : [%s].",
 	        		__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
 		}
 	}
@@ -114,7 +118,7 @@ int cc_coin_toss::pre_run()
 
 	if(0 != generate_data(m_id, m_party_states[m_id].seed, m_party_states[m_id].commit))
 	{
-		syslog(LOG_ERR, "%s: self data generation failed; toss failure.", __FUNCTION__);
+		LC.error("%s: self data generation failed; toss failure.", __FUNCTION__);
 		return -1;
 	}
 	return 0;
@@ -129,13 +133,13 @@ int cc_coin_toss::post_run()
 
 	if(m_toss_outcomes.size() != m_rounds)
 	{
-		syslog(LOG_ERR, "%s: invalid number of toss results %lu out of %lu; toss failure.", __FUNCTION__, m_toss_outcomes.size(), m_rounds);
+		LC.error("%s: invalid number of toss results %lu out of %lu; toss failure.", __FUNCTION__, m_toss_outcomes.size(), m_rounds);
 		return -1;
 	}
 	size_t round = 0;
 	for(std::list< std::vector< u_int8_t > >::const_iterator toss = m_toss_outcomes.begin(); toss != m_toss_outcomes.end(); ++toss, ++round)
 	{
-		syslog(LOG_INFO, "%s: toss result %lu = <%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X>",
+		LC.info("%s: toss result %lu = <%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X>",
 				__FUNCTION__, round,
 				(*toss)[0], (*toss)[1], (*toss)[2], (*toss)[3], (*toss)[4], (*toss)[5], (*toss)[6], (*toss)[7],
 				(*toss)[8], (*toss)[9], (*toss)[10], (*toss)[11], (*toss)[12], (*toss)[13], (*toss)[14], (*toss)[15]);
@@ -143,7 +147,7 @@ int cc_coin_toss::post_run()
 	return 0;
 }
 
-int cc_coin_toss::generate_data(const size_t id, std::vector<u_int8_t> & seed, std::vector<u_int8_t> & commit)
+int cc_coin_toss::generate_data(const size_t id, std::vector<u_int8_t> & seed, std::vector<u_int8_t> & commit) const
 {
 	int result = -1;
 	seed.resize(SEED_BYTE_SIZE);
@@ -151,16 +155,16 @@ int cc_coin_toss::generate_data(const size_t id, std::vector<u_int8_t> & seed, s
 	if(RAND_bytes(seed.data(), 16))
 	{
 		if(0 == (result = commit_seed(id, seed, commit)))
-			syslog(LOG_DEBUG, "%s: %lu data generated.", __FUNCTION__, id);
+			LC.debug("%s: %lu data generated.", __FUNCTION__, id);
 		else
-			syslog(LOG_ERR, "%s: commit_seed() failed.", __FUNCTION__);
+			LC.error("%s: commit_seed() failed.", __FUNCTION__);
 	}
 	else
-		syslog(LOG_ERR, "%s: RAND_bytes() failed.", __FUNCTION__);
+		LC.error("%s: RAND_bytes() failed.", __FUNCTION__);
 	return result;
 }
 
-int cc_coin_toss::commit_seed(const size_t id, const std::vector<u_int8_t> & seed, std::vector<u_int8_t> & commit)
+int cc_coin_toss::commit_seed(const size_t id, const std::vector<u_int8_t> & seed, std::vector<u_int8_t> & commit) const
 {
 	int result = -1;
 	EVP_MD_CTX ctx;
@@ -179,27 +183,27 @@ int cc_coin_toss::commit_seed(const size_t id, const std::vector<u_int8_t> & see
 					if(SHA256_BYTE_SIZE == digest_size)
 					{
 						result = 0;
-						syslog(LOG_INFO, "%s: seed committed by SHA256 hash.", __FUNCTION__);
+						LC.info("%s: seed committed by SHA256 hash.", __FUNCTION__);
 					}
 					else
-						syslog(LOG_ERR, "%s: digest size %u mismatch SHA256 size %u.", __FUNCTION__, digest_size, SHA256_BYTE_SIZE);
+						LC.error("%s: digest size %u mismatch SHA256 size %u.", __FUNCTION__, digest_size, SHA256_BYTE_SIZE);
 				}
 				else
-					syslog(LOG_ERR, "%s: EVP_DigestFinal_ex() failed.", __FUNCTION__);
+					LC.error("%s: EVP_DigestFinal_ex() failed.", __FUNCTION__);
 			}
 			else
-				syslog(LOG_ERR, "%s: EVP_DigestUpdate(seed) failed.", __FUNCTION__);
+				LC.error("%s: EVP_DigestUpdate(seed) failed.", __FUNCTION__);
 		}
 		else
-			syslog(LOG_ERR, "%s: EVP_DigestUpdate(id) failed.", __FUNCTION__);
+			LC.error("%s: EVP_DigestUpdate(id) failed.", __FUNCTION__);
 	}
 	else
-		syslog(LOG_ERR, "%s: EVP_DigestInit_ex() failed.", __FUNCTION__);
+		LC.error("%s: EVP_DigestInit_ex() failed.", __FUNCTION__);
 	EVP_MD_CTX_cleanup(&ctx);
 	return result;
 }
 
-int cc_coin_toss::valid_seed(const size_t id, const std::vector<u_int8_t> & seed, const std::vector<u_int8_t> & commit)
+int cc_coin_toss::valid_seed(const size_t id, const std::vector<u_int8_t> & seed, const std::vector<u_int8_t> & commit) const
 {
 	std::vector<u_int8_t> control_commit;
 	commit_seed(id, seed, control_commit);
@@ -216,11 +220,11 @@ void cc_coin_toss::handle_party_conn(const size_t party_id, const bool connected
 	{
 		if(ps_nil == peer.state)
 		{
-			syslog(LOG_DEBUG, "%s: party %lu is now connected.", __FUNCTION__, party_id);
+			LC.debug("%s: party %lu is now connected.", __FUNCTION__, party_id);
 			peer.state = ps_connected;
 		}
 		else
-			syslog(LOG_WARNING, "%s: party %lu unexpectedly again connected.", __FUNCTION__, party_id);
+			LC.warn("%s: party %lu unexpectedly again connected.", __FUNCTION__, party_id);
 	}
 	else
 	{
@@ -235,12 +239,12 @@ void cc_coin_toss::handle_party_conn(const size_t party_id, const bool connected
 
 		if(!OK)
 		{
-			syslog(LOG_ERR, "%s: party id %lu premature disconnection; toss failed.", __FUNCTION__, party_id);
+			LC.error("%s: party id %lu premature disconnection; toss failed.", __FUNCTION__, party_id);
 			m_run_flag = false;
 		}
 		else
 		{
-			syslog(LOG_DEBUG, "%s: party %lu is now disconnected.", __FUNCTION__, party_id);
+			LC.debug("%s: party %lu is now disconnected.", __FUNCTION__, party_id);
 		}
 	}
 }
@@ -273,7 +277,7 @@ bool cc_coin_toss::party_run_around(const size_t party_id)
 	case ps_connected:
 		if(0 != m_cc->send(party_id, self.commit.data(), self.commit.size()))
 		{
-			syslog(LOG_ERR, "%s: party id %lu commit send failure; toss failed.", __FUNCTION__, party_id);
+			LC.error("%s: party id %lu commit send failure; toss failed.", __FUNCTION__, party_id);
 			return (m_run_flag = false);
 		}
 		else
@@ -298,7 +302,7 @@ bool cc_coin_toss::party_run_around(const size_t party_id)
 	case ps_commit_rcvd:
 		if(0 != m_cc->send(party_id, self.seed.data(), self.seed.size()))
 		{
-			syslog(LOG_ERR, "%s: party id %lu seed send failure; toss failed.", __FUNCTION__, party_id);
+			LC.error("%s: party id %lu seed send failure; toss failed.", __FUNCTION__, party_id);
 			return (m_run_flag = false);
 		}
 		peer.state = ps_seed_sent;
@@ -322,7 +326,7 @@ bool cc_coin_toss::party_run_around(const size_t party_id)
 	case ps_seed_rcvd:
 		if(0 != valid_seed(party_id, peer.seed, peer.commit))
 		{
-			syslog(LOG_ERR, "%s: party id %lu seed invalid; toss failed.", __FUNCTION__, party_id);
+			LC.error("%s: party id %lu seed invalid; toss failed.", __FUNCTION__, party_id);
 			return (m_run_flag = false);
 		}
 		peer.state = ps_round_up;
@@ -330,7 +334,7 @@ bool cc_coin_toss::party_run_around(const size_t party_id)
 	case ps_round_up:
 		return true;
 	default:
-		syslog(LOG_ERR, "%s: invalid party state value %u.", __FUNCTION__, peer.state);
+		LC.error("%s: invalid party state value %u.", __FUNCTION__, peer.state);
 		exit(__LINE__);
 	}
 }
@@ -357,13 +361,13 @@ bool cc_coin_toss::round_up()
 	m_toss_outcomes.push_back(toss);
 	if(m_toss_outcomes.size() == m_rounds)
 	{
-		syslog(LOG_NOTICE, "%s: done tossing; all results are in.", __FUNCTION__);
+		LC.notice("%s: done tossing; all results are in.", __FUNCTION__);
 		return (m_run_flag = false);
 	}
 
 	if(0 != generate_data(m_id, m_party_states[m_id].seed, m_party_states[m_id].commit))
 	{
-		syslog(LOG_ERR, "%s: self data generation failed; toss failure.", __FUNCTION__);
+		LC.error("%s: self data generation failed; toss failure.", __FUNCTION__);
 		exit(__LINE__);
 	}
 

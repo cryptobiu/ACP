@@ -13,11 +13,10 @@
 
 #include <openssl/rand.h>
 #include <openssl/evp.h>
-
+#include <log4cpp/Category.hh>
 #include <event2/event.h>
 
 #include "coin_toss_test.h"
-
 #include "comm_client_cb_api.h"
 #include "ac_protocol.h"
 
@@ -28,13 +27,13 @@
 
 #include "cc_coin_toss.h"
 
-void test_tcp_mesh_coin_toss(const unsigned int id, const unsigned int count, const char * party_file, const size_t rounds)
+void test_tcp_mesh_coin_toss(const unsigned int id, const unsigned int count, const char * party_file, const size_t rounds, const char * logcat)
 {
-	cc_coin_toss cct;
+	cc_coin_toss cct(((std::string(logcat) + '.') + "cct").c_str());
 	if(0 != cct.run(id, count, party_file, rounds, 60))
-		syslog(LOG_ERR, "%s: %lu round tcp mesh coin toss test failed.", __FUNCTION__, rounds);
+		log4cpp::Category::getInstance(logcat).error("%s: %lu round tcp mesh coin toss test failed.", __FUNCTION__, rounds);
 	else
-		syslog(LOG_NOTICE, "%s: %lu round tcp mesh coin toss test succeeded.", __FUNCTION__, rounds);
+		log4cpp::Category::getInstance(logcat).notice("%s: %lu round tcp mesh coin toss test succeeded.", __FUNCTION__, rounds);
 }
 
 /*
