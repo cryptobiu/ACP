@@ -32,17 +32,17 @@ class comm_client_tcp_mesh : public comm_client
 	int set_peer_conn(const unsigned int id, int conn_fd);
 	void disconnect_peer(const unsigned int id);
 
-	void on_timer();
-	void on_accept();
-	void on_connect(const unsigned int id);
-	void on_select_read(int conn_fd);
-	void on_select_timeout(int conn_fd);
-	void on_write1(const unsigned int id);
-	void on_write2(const unsigned int id);
-	void on_read(const unsigned int id);
+	void on_timer(int fd, short what, void * arg);
+	void on_accept(int fd, short what, void * arg);
+	void on_connect(int fd, short what, void * arg);
+	void on_select_read(int fd, short what, void * arg);
+	void on_select_timeout(int fd, short what, void * arg);
+	void on_write1(int fd, short what, void * arg);
+	void on_write2(int fd, short what, void * arg);
+	void on_read(int fd, short what, void * arg);
 
 public:
-	comm_client_tcp_mesh();
+	comm_client_tcp_mesh(const char * log_category = "tmc");
 	virtual ~comm_client_tcp_mesh();
 
 	virtual int start(const unsigned int id, const unsigned int peer_count, const char * comm_conf_file, comm_client_cb_api * sink);

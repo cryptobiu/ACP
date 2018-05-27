@@ -1,3 +1,5 @@
+comm_client/.cproject
+comm_client/.project
 comm_client/CMakeCache.txt
 comm_client/CMakeFiles/
 comm_client/Makefile

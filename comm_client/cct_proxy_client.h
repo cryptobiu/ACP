@@ -16,7 +16,6 @@ class cct_proxy_client : public comm_client
 	std::vector<u_int8_t> m_data;
 
 	void run();
-	void set_syslog_name();
 
 	static void connect_cb(evutil_socket_t fd, short what, void * arg);
 	static void timer_cb(evutil_socket_t fd, short what, void * arg);
@@ -34,7 +33,7 @@ class cct_proxy_client : public comm_client
 	int process_messages();
 
 public:
-	cct_proxy_client(const char * proxy_addr, const u_int16_t proxy_port);
+	cct_proxy_client(const char * proxy_addr, const u_int16_t proxy_port, const char * log_category = "cpc");
 	virtual ~cct_proxy_client();
 
 	int start(const unsigned int id, const unsigned int peer_count, const char * comm_conf_file, comm_client_cb_api * sink);

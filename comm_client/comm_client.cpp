@@ -2,17 +2,17 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string>
-#include <syslog.h>
 #include <memory.h>
 #include <semaphore.h>
 #include <errno.h>
-
 #include <sys/uio.h>
+
+#include <log4cpp/Category.hh>
 
 #include "comm_client.h"
 #include "comm_client_cb_api.h"
 
-int log_level = LOG_NOTICE;//;LOG_DEBUG
+#define LC log4cpp::Category::getInstance(m_logcat)
 
 void * comm_client_proc(void * arg)
 {
@@ -22,8 +22,8 @@ void * comm_client_proc(void * arg)
 }
 
 
-comm_client::comm_client()
-: m_id((unsigned int)-1), m_sink(NULL), m_runner(0)
+comm_client::comm_client(const char * log_category)
+: m_logcat(log_category), m_id((unsigned int)-1), m_peer_count(0), m_sink(NULL), m_runner(0)
 {
 	sem_init(&m_run_flag, 0, 0);
 }
@@ -37,13 +37,13 @@ int comm_client::start(const unsigned int id, const unsigned int peer_count, con
 {
 	if(id >= peer_count)
 	{
-		syslog(LOG_ERR, "%s: invalid id/parties values %u/%u", __FUNCTION__, id, peer_count);
+		LC.error("%s: invalid id/parties values %u/%u", __FUNCTION__, id, peer_count);
 		return -1;
 	}
 
 	if(get_run_flag())
 	{
-		syslog(LOG_ERR, "%s: this comm client is already started", __FUNCTION__);
+		LC.error("%s: this comm client is already started", __FUNCTION__);
 		return -1;
 	}
 	set_run_flag(true);
@@ -53,7 +53,9 @@ int comm_client::start(const unsigned int id, const unsigned int peer_count, con
 	m_comm_conf_file = comm_conf_file;
 	m_sink = sink;
 
-	start_log();
+	struct timespec ts;
+	clock_gettime(CLOCK_REALTIME, &ts);
+	LC.notice("%s: started %lu.%03lu", __FUNCTION__, ts.tv_sec, ts.tv_nsec/1000000);
 
 	return launch();
 }
@@ -64,9 +66,8 @@ int comm_client::launch()
 	if(0 != result)
 	{
 		char errmsg[512];
-		syslog(LOG_ERR, "%s: pthread_create() failed with error %d : %s", __FUNCTION__, result, strerror_r(result, errmsg, 512));
+		LC.error("%s: pthread_create() failed with error %d : %s", __FUNCTION__, result, strerror_r(result, errmsg, 512));
 		set_run_flag(false);
-		stop_log();
 		return -1;
 	}
 	return 0;
@@ -76,7 +77,7 @@ void comm_client::stop()
 {
 	if(!get_run_flag())
 	{
-		syslog(LOG_ERR, "%s: this comm client is not running.", __FUNCTION__);
+		LC.error("%s: this comm client is not running.", __FUNCTION__);
 		return;
 	}
 	set_run_flag(false);
@@ -90,39 +91,23 @@ void comm_client::stop()
 	if(0 != result)
 	{
 		char errmsg[512];
-		syslog(LOG_ERR, "%s: pthread_timedjoin_np() failed with error %d : %s", __FUNCTION__, result, strerror_r(result, errmsg, 512));
+		LC.error("%s: pthread_timedjoin_np() failed with error %d : %s", __FUNCTION__, result, strerror_r(result, errmsg, 512));
 
 		result = pthread_cancel(m_runner);
 		if(0 != result)
 		{
 			char errmsg[512];
-			syslog(LOG_ERR, "%s: pthread_cancel() failed with error %d : %s", __FUNCTION__, result, strerror_r(result, errmsg, 512));
+			LC.error("%s: pthread_cancel() failed with error %d : %s", __FUNCTION__, result, strerror_r(result, errmsg, 512));
 		}
 	}
-	stop_log();
+
+	struct timespec ts;
+	clock_gettime(CLOCK_REALTIME, &ts);
+	LC.notice("%s: stopped %lu.%03lu", __FUNCTION__, ts.tv_sec, ts.tv_nsec/1000000);
+
 	m_id = (unsigned int)-1;
 	m_comm_conf_file.clear();
 	m_sink = NULL;
-}
-
-void comm_client::start_log()
-{
-	set_syslog_name();
-	openlog(m_syslog_name, LOG_NDELAY|LOG_PID, LOG_USER);
-	setlogmask(LOG_UPTO(log_level));
-
-	struct timespec ts;
-	clock_gettime(CLOCK_REALTIME, &ts);
-	syslog(LOG_NOTICE, "%s: %lu.%03lu", __FUNCTION__, ts.tv_sec, ts.tv_nsec/1000000);
-}
-
-void comm_client::stop_log()
-{
-	struct timespec ts;
-	clock_gettime(CLOCK_REALTIME, &ts);
-	syslog(LOG_NOTICE, "%s: %lu.%03lu", __FUNCTION__, ts.tv_sec, ts.tv_nsec/1000000);
-
-	closelog();
 }
 
 bool comm_client::get_run_flag()
@@ -132,7 +117,7 @@ bool comm_client::get_run_flag()
 	{
         int errcode = errno;
         char errmsg[256];
-        syslog(LOG_ERR, "%s: sem_getvalue() failed with error %d : [%s].",
+        LC.fatal("%s: sem_getvalue() failed with error %d : [%s].",
         		__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
         exit(-__LINE__);
 	}
@@ -148,7 +133,7 @@ void comm_client::set_run_flag(bool raise)
 		{
 	        int errcode = errno;
 	        char errmsg[256];
-	        syslog(LOG_ERR, "%s: sem_wait() failed with error %d : [%s].",
+	        LC.fatal("%s: sem_wait() failed with error %d : [%s].",
 	        		__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
 	        exit(-__LINE__);
 		}
@@ -159,7 +144,7 @@ void comm_client::set_run_flag(bool raise)
 		{
 	        int errcode = errno;
 	        char errmsg[256];
-	        syslog(LOG_ERR, "%s: sem_post() failed with error %d : [%s].",
+	        LC.fatal("%s: sem_post() failed with error %d : [%s].",
 	        		__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
 	        exit(-__LINE__);
 		}

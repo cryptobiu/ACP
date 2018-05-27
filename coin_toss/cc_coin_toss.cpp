@@ -1,7 +1,6 @@
 
 #include <stdlib.h>
 #include <semaphore.h>
-#include <syslog.h>
 #include <memory.h>
 #include <stdio.h>
 #include <errno.h>

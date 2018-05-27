@@ -6,6 +6,7 @@ class comm_client;
 class ac_protocol : public comm_client_cb_api
 {
 protected:
+	std::string m_logcat;
 	comm_client * m_cc;
 	size_t m_id, m_parties, m_rounds;
 	std::string m_conf_file;
@@ -54,7 +55,7 @@ protected:
 	virtual int post_run() = 0;
 
 public:
-	ac_protocol();
+	ac_protocol(const char * log_category = "acp");
 	virtual ~ac_protocol();
 
 	virtual int run(const size_t id, const size_t parties, const char * conf_file, const size_t rounds, const size_t idle_timeout_seconds);

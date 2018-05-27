@@ -1,6 +1,5 @@
 
 #include <stdlib.h>
-#include <syslog.h>
 #include <string.h>
 #include <errno.h>
 
@@ -13,8 +12,8 @@
 #include "comm_client.h"
 #include "comm_client_tcp_mesh.h"
 
-ac_protocol::ac_protocol()
-: m_cc(new comm_client_tcp_mesh), m_id(-1), m_parties(0), m_rounds(0), m_run_flag(false)
+ac_protocol::ac_protocol(const char * log_category)
+: m_logcat(log_category), m_cc(new comm_client_tcp_mesh(((m_logcat + '.') + "ctm").c_str())), m_id(-1), m_parties(0), m_rounds(0), m_run_flag(false)
 {
 	int errcode = 0;
 	if(0 != (errcode = pthread_mutex_init(&m_q_lock, NULL)))

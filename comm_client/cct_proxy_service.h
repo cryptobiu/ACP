@@ -5,9 +5,9 @@ class comm_client;
 
 class cct_proxy_service : public comm_client_cb_api
 {
-	char m_syslog_name[32];
+	std::string m_logcat;
 public:
-	cct_proxy_service();
+	cct_proxy_service(const char * log_category = "cps");
 	virtual ~cct_proxy_service();
 
 	typedef struct __client

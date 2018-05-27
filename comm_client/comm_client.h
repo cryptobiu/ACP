@@ -8,12 +8,7 @@ class comm_client_cb_api;
 class comm_client
 {
 protected:
-	char m_syslog_name[32];
-	virtual void set_syslog_name() = 0;
-
-	void start_log();
-	void stop_log();
-
+	std::string m_logcat;
 	unsigned int m_id, m_peer_count;
 	std::string m_comm_conf_file;
 	comm_client_cb_api * m_sink;
@@ -27,7 +22,7 @@ protected:
 	void set_run_flag(bool);
 
 public:
-	comm_client();
+	comm_client(const char * log_category = "cc");
 	virtual ~comm_client();
 
 	virtual int start(const unsigned int id, const unsigned int peer_count, const char * comm_conf_file, comm_client_cb_api * sink);

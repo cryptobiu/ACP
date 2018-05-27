@@ -19,6 +19,7 @@
 
 void get_options(int argc, char *argv[], size_t & parties, std::string & conf_file, size_t & rounds);
 void show_usage(const char * prog);
+void init_log();
 
 void run_comm_tcp_mesh_client_test_fork(const size_t parties, const std::string & conf_file, const size_t rounds);
 //void run_comm_tcp_proxy_client_test_fork();
@@ -32,6 +33,7 @@ int main(int argc, char *argv[]) {
 	std::string conf_file;
 
 	get_options(argc, argv, parties, conf_file, rounds);
+	init_log();
 
 	std::cout << "!!!Hello World!!!" << std::endl; // prints !!!Hello World!!!
 
@@ -87,6 +89,43 @@ void show_usage(const char * prog)
 	std::cout << "-n   number of parties" << std::endl;
 	std::cout << "-f   peer address file" << std::endl;
 	std::cout << "-r   number of rounds" << std::endl;
+}
+
+//******************************************************************************************//
+
+void init_log()
+{
+	static const char the_layout[] = "%d{%y-%m-%d %H:%M:%S.%l}| %-6p | %-15c | %m%n";
+
+	std::string log_file = log.file;
+	log_file.insert(0, "/");
+	log_file.insert(0, log.directory);
+
+    log4cpp::Layout * log_layout = NULL;
+    log4cpp::Appender * appender = new log4cpp::RollingFileAppender("lpm.appender", log_file.c_str(), log.max_size, log.max_files);
+
+    bool pattern_layout = false;
+    try
+    {
+        log_layout = new log4cpp::PatternLayout();
+        ((log4cpp::PatternLayout *)log_layout)->setConversionPattern(the_layout);
+        appender->setLayout(log_layout);
+        pattern_layout = true;
+    }
+    catch(...)
+    {
+        pattern_layout = false;
+    }
+
+    if(!pattern_layout)
+    {
+        log_layout = new log4cpp::BasicLayout();
+        appender->setLayout(log_layout);
+    }
+
+    log4cpp::Category::getInstance("drmn").addAppender(appender);
+    log4cpp::Category::getInstance("drmn").setPriority((log4cpp::Priority::PriorityLevel)log.level);
+    log4cpp::Category::getInstance("drmn").notice("dreamon log start");
 }
 
 //******************************************************************************************//

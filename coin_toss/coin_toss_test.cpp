@@ -1,7 +1,6 @@
 
 #include <unistd.h>
 #include <semaphore.h>
-#include <syslog.h>
 #include <memory.h>
 
 #include <string>
