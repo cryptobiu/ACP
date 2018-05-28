@@ -58,7 +58,7 @@ public:
 	ac_protocol(const char * log_category);
 	virtual ~ac_protocol();
 
-	virtual int run(const size_t id, const size_t parties, const char * conf_file, const size_t idle_timeout_seconds);
+	virtual int run_ac_protocol(const size_t id, const size_t parties, const char * conf_file, const size_t idle_timeout_seconds);
 
 	virtual void on_comm_up_with_party(const unsigned int party_id);
 	virtual void on_comm_down_with_party(const unsigned int party_id);

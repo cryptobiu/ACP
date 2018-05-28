@@ -41,7 +41,7 @@ cc_coin_toss::~cc_coin_toss()
 int cc_coin_toss::run(const size_t id, const size_t parties, const char * conf_file, const size_t rounds, const size_t idle_timeout_seconds)
 {
 	m_rounds = rounds;
-	return ac_protocol::run(id, parties, conf_file, idle_timeout_seconds);
+	return ac_protocol::run_ac_protocol(id, parties, conf_file, idle_timeout_seconds);
 }
 
 int cc_coin_toss::pre_run()

@@ -153,7 +153,7 @@ void ac_protocol::on_comm_message(const unsigned int src_id, const unsigned char
 	push_comm_event(pevt);
 }
 
-int ac_protocol::run(const size_t id, const size_t parties, const char * conf_file, const size_t idle_timeout_seconds)
+int ac_protocol::run_ac_protocol(const size_t id, const size_t parties, const char * conf_file, const size_t idle_timeout_seconds)
 {
 	m_id = id;
 	m_parties = parties;
