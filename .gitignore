@@ -15,3 +15,11 @@ coin_toss/Makefile
 coin_toss/cmake_install.cmake
 coin_toss/cointoss
 
+cct_proxy/.cproject
+cct_proxy/.project
+cct_proxy/CMakeCache.txt
+cct_proxy/CMakeFiles/
+cct_proxy/Makefile
+cct_proxy/cct_proxy
+cct_proxy/cmake_install.cmake
+
