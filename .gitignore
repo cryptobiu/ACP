@@ -23,3 +23,11 @@ cct_proxy/Makefile
 cct_proxy/cct_proxy
 cct_proxy/cmake_install.cmake
 
+ccw_proxy/.cproject
+ccw_proxy/.project
+ccw_proxy/CMakeCache.txt
+ccw_proxy/CMakeFiles/
+ccw_proxy/Makefile
+ccw_proxy/ccw_proxy
+ccw_proxy/cmake_install.cmake
+
