@@ -10,14 +10,15 @@
 #include <log4cpp/Category.hh>
 
 #include "comm_client_cb_api.h"
+#include "comm_client_factory.h"
 #include "ac_protocol.h"
 #include "comm_client.h"
-#include "comm_client_tcp_mesh.h"
 
 #define LC log4cpp::Category::getInstance(m_logcat)
 
-ac_protocol::ac_protocol(const char * log_category)
-: m_logcat(log_category), m_cc(new comm_client_tcp_mesh(((m_logcat + '.') + "ctm").c_str())), m_id(-1), m_parties(0), m_run_flag(false)
+ac_protocol::ac_protocol(comm_client_factory::client_type_t cc_type, const char * log_category)
+: m_logcat(log_category), m_id(-1), m_parties(0), m_run_flag(false)
+, m_cc( comm_client_factory::create_comm_client(cc_type, ((m_logcat + '.') + "cc").c_str()))
 {
 	int errcode = 0;
 	if(0 != (errcode = pthread_mutex_init(&m_q_lock, NULL)))
