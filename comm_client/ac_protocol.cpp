@@ -201,6 +201,19 @@ int ac_protocol::run_ac_protocol(const size_t id, const size_t parties, const ch
 				exit(__LINE__);
 			}
 
+			if(!handle_comm_events())
+			{
+				clock_gettime(CLOCK_REALTIME, &now);
+				if(idle_timeout_seconds < (now.tv_sec - idle_since.tv_sec))
+				{
+					LC.error("%s: idle timeout %lu reached; run failed.", __FUNCTION__, idle_timeout_seconds);
+					m_run_flag = false;
+				}
+			}
+			else
+				clock_gettime(CLOCK_REALTIME, &idle_since);
+
+			/*
 			if(handle_comm_event())
 			{
 				clock_gettime(CLOCK_REALTIME, &idle_since);
@@ -214,7 +227,7 @@ int ac_protocol::run_ac_protocol(const size_t id, const size_t parties, const ch
 					LC.error("%s: idle timeout %lu reached; run failed.", __FUNCTION__, idle_timeout_seconds);
 					m_run_flag = false;
 				}
-			}
+			}*/
 		}
 		else
 		{
@@ -235,20 +248,17 @@ int ac_protocol::run_ac_protocol(const size_t id, const size_t parties, const ch
 	return 0;
 }
 
-bool ac_protocol::handle_comm_event()
+bool ac_protocol::handle_comm_events()
 {
-	comm_evt * evt = NULL;
+	bool had_comm_evts = false;
+	std::list< comm_evt * > comm_evts;
 	int errcode;
 	struct timespec to;
 	clock_gettime(CLOCK_REALTIME, &to);
-	to.tv_sec += 2;
+	to.tv_sec += 1;
 	if(0 == (errcode = pthread_mutex_timedlock(&m_q_lock, &to)))
 	{
-		if(!m_comm_q.empty())
-		{
-			evt = *m_comm_q.begin();
-			m_comm_q.pop_front();
-		}
+		comm_evts.swap(m_comm_q);
 
 		if(0 != (errcode = pthread_mutex_unlock(&m_q_lock)))
 		{
@@ -266,32 +276,37 @@ bool ac_protocol::handle_comm_event()
 		exit(__LINE__);
 	}
 
-	if(NULL != evt)
-	{
-		if(evt->party_id < m_parties && evt->party_id != m_id)
-		{
-			switch(evt->type)
-			{
-			case comm_evt_conn:
-				handle_conn_event(evt);
-				break;
-			case comm_evt_msg:
-				handle_msg_event(evt);
-				break;
-			default:
-				LC.error("%s: invalid comm event type %u", __FUNCTION__, evt->type);
-				break;
-			}
-		}
-		else
-		{
-			LC.error("%s: invalid party id %u.", __FUNCTION__, evt->party_id);
-		}
+	had_comm_evts = !comm_evts.empty();
+	for(std::list< comm_evt * >::iterator i = comm_evts.begin(); m_run_flag && i != comm_evts.end(); ++i)
+		handle_comm_event(*i);
+	return had_comm_evts;
+}
 
-		delete evt;
-		return true;
+void ac_protocol::handle_comm_event(comm_evt * evt)
+{
+	if(evt->party_id < m_parties && evt->party_id != m_id)
+	{
+		switch(evt->type)
+		{
+		case comm_evt_conn:
+			handle_conn_event(evt);
+			break;
+		case comm_evt_msg:
+			handle_msg_event(evt);
+			break;
+		default:
+			LC.error("%s: invalid comm event type %u", __FUNCTION__, evt->type);
+			break;
+		}
 	}
-	return false;
+	else
+	{
+		LC.error("%s: invalid party id %u.", __FUNCTION__, evt->party_id);
+	}
+
+	delete evt;
+
+	while(m_run_flag && run_around() && round_up());
 }
 
 void ac_protocol::handle_conn_event(comm_evt * evt)

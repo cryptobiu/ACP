@@ -30,7 +30,7 @@
 #define LC log4cpp::Category::getInstance(m_logcat)
 
 cc_coin_toss::cc_coin_toss(const char * log_category)
-: ac_protocol(comm_client_factory::cc_tcp_mesh, log_category)
+: ac_protocol(comm_client_factory::cc_tcp_mesh, log_category), m_rounds(0)
 {
 }
 
