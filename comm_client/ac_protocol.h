@@ -42,8 +42,7 @@ protected:
 	void push_comm_event(comm_evt * evt);
 	void report_party_comm(const size_t party_id, const bool comm);
 
-	bool handle_comm_events();
-	void handle_comm_event(comm_evt * evt);
+	bool handle_comm_event();
 	void handle_conn_event(comm_evt * evt);
 	void handle_msg_event(comm_evt * evt);
 	virtual void handle_party_conn(const size_t party_id, const bool connected) = 0;

@@ -201,7 +201,7 @@ int ac_protocol::run_ac_protocol(const size_t id, const size_t parties, const ch
 				exit(__LINE__);
 			}
 
-			if(handle_comm_events())
+			if(handle_comm_event())
 			{
 				clock_gettime(CLOCK_REALTIME, &idle_since);
 				while(m_run_flag && run_around() && round_up());
@@ -235,17 +235,20 @@ int ac_protocol::run_ac_protocol(const size_t id, const size_t parties, const ch
 	return 0;
 }
 
-bool ac_protocol::handle_comm_events()
+bool ac_protocol::handle_comm_event()
 {
-	std::list< comm_evt * > all_comm_evts;
-
+	comm_evt * evt = NULL;
 	int errcode;
 	struct timespec to;
 	clock_gettime(CLOCK_REALTIME, &to);
 	to.tv_sec += 2;
 	if(0 == (errcode = pthread_mutex_timedlock(&m_q_lock, &to)))
 	{
-		all_comm_evts.swap(m_comm_q);
+		if(!m_comm_q.empty())
+		{
+			evt = *m_comm_q.begin();
+			m_comm_q.pop_front();
+		}
 
 		if(0 != (errcode = pthread_mutex_unlock(&m_q_lock)))
 		{
@@ -263,35 +266,32 @@ bool ac_protocol::handle_comm_events()
 		exit(__LINE__);
 	}
 
-	for(std::list< comm_evt * >::iterator i = all_comm_evts.begin(); i != all_comm_evts.end() && m_run_flag; ++i)
-		handle_comm_event(*i);
-
-	for(std::list< comm_evt * >::iterator i = all_comm_evts.begin(); i != all_comm_evts.end(); ++i)
-		delete (*i);
-
-	return (!all_comm_evts.empty());
-}
-
-void ac_protocol::handle_comm_event(comm_evt * evt)
-{
-	if(evt->party_id >= m_parties || evt->party_id == m_id)
+	if(NULL != evt)
 	{
-		LC.error("%s: invalid party id %u.", __FUNCTION__, evt->party_id);
-		return;
-	}
+		if(evt->party_id < m_parties && evt->party_id != m_id)
+		{
+			switch(evt->type)
+			{
+			case comm_evt_conn:
+				handle_conn_event(evt);
+				break;
+			case comm_evt_msg:
+				handle_msg_event(evt);
+				break;
+			default:
+				LC.error("%s: invalid comm event type %u", __FUNCTION__, evt->type);
+				break;
+			}
+		}
+		else
+		{
+			LC.error("%s: invalid party id %u.", __FUNCTION__, evt->party_id);
+		}
 
-	switch(evt->type)
-	{
-	case comm_evt_conn:
-		handle_conn_event(evt);
-		break;
-	case comm_evt_msg:
-		handle_msg_event(evt);
-		break;
-	default:
-		LC.error("%s: invalid comm event type %u", __FUNCTION__, evt->type);
-		break;
+		delete evt;
+		return true;
 	}
+	return false;
 }
 
 void ac_protocol::handle_conn_event(comm_evt * evt)

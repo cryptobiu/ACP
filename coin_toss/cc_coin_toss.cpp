@@ -19,10 +19,10 @@
 #include <event2/event.h>
 
 #include "comm_client_cb_api.h"
-#include "ac_protocol.h"
+#include "comm_client_factory.h"
 #include "comm_client.h"
+#include "ac_protocol.h"
 #include "cc_coin_toss.h"
-#include "comm_client_tcp_mesh.h"
 
 #define SHA256_BYTE_SIZE		32
 #define SEED_BYTE_SIZE			16
@@ -30,7 +30,7 @@
 #define LC log4cpp::Category::getInstance(m_logcat)
 
 cc_coin_toss::cc_coin_toss(const char * log_category)
-: ac_protocol(log_category)
+: ac_protocol(comm_client_factory::cc_tcp_mesh, log_category)
 {
 }
 
