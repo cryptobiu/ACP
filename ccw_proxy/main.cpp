@@ -16,29 +16,34 @@
 #include <log4cpp/PatternLayout.hh>
 #include <event2/event.h>
 
-#include "comm_client_cb_api.h"
-#include "cct_proxy_service.h"
+#include "boost/beast/core.hpp"
+#include "boost/beast/websocket.hpp"
+#include "boost/asio/bind_executor.hpp"
+#include "boost/asio/strand.hpp"
+#include "boost/asio/ip/tcp.hpp"
 
-void get_options(int argc, char *argv[], cct_proxy_service::client_t & clnt, cct_proxy_service::service_t & svc, int & log_level);
+void get_options(int argc, char *argv[], size_t & client_id, size_t & client_cnt, std::string & conf_file, std::string & ipaddr, u_int16_t & port, int & log_level);
 void show_usage(const char * prog);
 void init_log(const char * a_log_file, const char * a_log_dir, const int log_level, const char * logcat);
 
+static const char g_logcat[] = "ccwp";
 int main(int argc, char *argv[])
 {
 	int log_level = 500; //notice
-	cct_proxy_service::client_t clnt;
-	cct_proxy_service::service_t svc;
-	get_options(argc, argv, clnt, svc, log_level);
-	init_log("cct_proxy.log", "./", log_level, "cctp");
+	size_t client_id = (size_t)-1, client_cnt = (size_t)-1;
+	std::string conf_file, ipaddr;
+	u_int16_t port = (u_int16_t)-1;
+	get_options(argc, argv, client_id, client_cnt, conf_file, ipaddr, port, log_level);
+	init_log("cct_proxy.log", "./", log_level, g_logcat);
 
-	cct_proxy_service proxy("cctp");
-	proxy.serve(svc, clnt);
+	auto const ip_address = boost::asio::ip::make_address(ipaddr.c_str());
+	boost::asio::io_context ioc{/*threads*/1};
 
 	return 0;
 }
 
 
-void get_options(int argc, char *argv[], cct_proxy_service::client_t & clnt, cct_proxy_service::service_t & svc, int & log_level)
+void get_options(int argc, char *argv[], size_t & client_id, size_t & client_cnt, std::string & conf_file, std::string & ipaddr, u_int16_t & port, int & log_level)
 {
 	if(argc == 1)
 	{
@@ -46,7 +51,7 @@ void get_options(int argc, char *argv[], cct_proxy_service::client_t & clnt, cct
 		exit(0);
 	}
 	int opt;
-	while ((opt = getopt(argc, argv, "hi:c:f:a:p:l:")) != -1)
+	while ((opt = getopt(argc, argv, "hi:c:f:l:")) != -1)
 	{
 		switch (opt)
 		{
@@ -54,19 +59,19 @@ void get_options(int argc, char *argv[], cct_proxy_service::client_t & clnt, cct
 			show_usage(argv[0]);
 			exit(0);
 		case 'i':
-			clnt.id = (unsigned int)strtol(optarg, NULL, 10);
+			client_id = (unsigned int)strtol(optarg, NULL, 10);
 			break;
 		case 'c':
-			clnt.count = (unsigned int)strtol(optarg, NULL, 10);
+			client_cnt = (unsigned int)strtol(optarg, NULL, 10);
 			break;
 		case 'f':
-			clnt.conf_file = optarg;
+			conf_file = optarg;
 			break;
 		case 'a':
-			svc.ip = optarg;
+			ipaddr = optarg;
 			break;
 		case 'p':
-			svc.port = (u_int16_t)strtol(optarg, NULL, 10);
+			port = (u_int16_t)strtol(optarg, NULL, 10);
 			break;
 		case 'l':
 			log_level = (int)strtol(optarg, NULL, 10);
@@ -80,7 +85,7 @@ void get_options(int argc, char *argv[], cct_proxy_service::client_t & clnt, cct
 }
 
 void show_usage(const char * prog)
-{//hi:c:f:a:p:x:d:s:z:l:
+{
 	std::cout << "Usage:" << std::endl;
 	std::cout << prog << "   [ OPTIONS ]" << std::endl;
 	std::cout << "-i   client id" << std::endl;

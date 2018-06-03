@@ -20,7 +20,11 @@ public:
 
 	typedef struct __service
 	{
+		std::string ip;
+		u_int16_t port;
+
 		__service()
+		: port((u_int16_t)-1)
 		{}
 	}service_t;
 
