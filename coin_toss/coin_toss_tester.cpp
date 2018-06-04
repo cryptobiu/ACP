@@ -22,7 +22,6 @@
 
 #include "comm_client_cb_api.h"
 #include "coin_toss_test.h"
-#include "cct_proxy_service.h"
 
 void get_options(int argc, char *argv[], size_t & parties, std::string & conf_file, size_t & rounds, int & log_level);
 void show_usage(const char * prog);
@@ -41,8 +40,8 @@ int main(int argc, char *argv[]) {
 
 	std::cout << "!!!Hello World!!!" << std::endl; // prints !!!Hello World!!!
 
-	run_comm_tcp_mesh_client_test_fork(parties, conf_file, rounds, log_level);
-	//run_comm_tcp_proxy_client_test_fork();
+	//run_comm_tcp_mesh_client_test_fork(parties, conf_file, rounds, log_level);
+	run_comm_tcp_proxy_client_test_fork(parties, conf_file, rounds, log_level);
 
 	return 0;
 }
@@ -177,16 +176,13 @@ void run_comm_tcp_proxy_client_test_fork(const size_t parties, const std::string
 	char log_category[32];
 	char log_file[32];
 
+	//launch proxies
 	for(size_t i = 0; i < parties; i++)
 	{
-		//launch proxies
 		switch(cpid = fork())
 		{
 		case 0:
-			snprintf(log_category, 32, "ct.tmt.%03lu", i);
-			snprintf(log_file, 32, "coin_toss_test.%03lu.log", i);
-			init_log(log_file, "./logs", log_level, log_category);
-			test_tcp_mesh_coin_toss(i, parties, conf_file.c_str(), rounds, log_category);
+			test_tcp_proxy_server("127.0.0.1", 9000 + i, i, parties, conf_file.c_str(), log_level);
 			exit(0);
 		case -1:
 			{
@@ -198,19 +194,22 @@ void run_comm_tcp_proxy_client_test_fork(const size_t parties, const std::string
 			}
 			exit(-1);
 		default:
-			std::cout << "cpid: " << cpid << std::endl;
+			std::cout << "cct proxy cpid: " << cpid << std::endl;
 			children_of_the_revolution.insert(cpid);
 			continue;
 		}
+	}
 
-		//launch clients
+	//launch clients
+	for(size_t i = 0; i < parties; i++)
+	{
 		switch(cpid = fork())
 		{
 		case 0:
 			snprintf(log_category, 32, "ct.tpc.%03lu", i);
 			snprintf(log_file, 32, "coin_toss_test.%03lu.log", i);
 			init_log(log_file, "./logs", log_level, log_category);
-			test_tcp_mesh_coin_toss(i, parties, conf_file.c_str(), rounds, log_category);
+			test_tcp_proxy_coin_toss("127.0.0.1", 9000 + i, i, parties, conf_file.c_str(), rounds, log_category);
 			exit(0);
 		case -1:
 			{
@@ -222,7 +221,7 @@ void run_comm_tcp_proxy_client_test_fork(const size_t parties, const std::string
 			}
 			exit(-1);
 		default:
-			std::cout << "cpid: " << cpid << std::endl;
+			std::cout << "cct client cpid: " << cpid << std::endl;
 			children_of_the_revolution.insert(cpid);
 			continue;
 		}

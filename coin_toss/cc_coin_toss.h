@@ -40,7 +40,7 @@ class cc_coin_toss : public ac_protocol
 	int valid_seed(const size_t id, const std::vector<u_int8_t> & seed, const std::vector<u_int8_t> & commit) const;
 
 public:
-	cc_coin_toss(const char * log_category);
+	cc_coin_toss(const comm_client_factory::client_type_t cc_type, comm_client::cc_args_t * cc_args);
 	virtual ~cc_coin_toss();
 
 	int run(const size_t id, const size_t parties, const char * conf_file, const size_t rounds, const size_t idle_timeout_seconds);

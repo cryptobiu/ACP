@@ -32,8 +32,8 @@ static const struct timeval naught = {0,0};
 static const struct timeval _50ms_ = {0,50000};
 static const struct timeval _1sec_ = {1,0};
 
-cct_proxy_client::cct_proxy_client(const char * log_category)
-: comm_client(log_category), m_proxy_port((u_int16_t)-1), m_peer_mask(NULL), m_mask_size(0)
+cct_proxy_client::cct_proxy_client(cc_args_t * cc_args)
+: comm_client(cc_args), m_proxy_addr(cc_args->proxy_addr), m_proxy_port(cc_args->proxy_port), m_peer_mask(NULL), m_mask_size(0)
 , m_sockfd(-1), m_base(NULL), m_timer(NULL), m_read(NULL), m_write(NULL)
 {
 }

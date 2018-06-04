@@ -18,9 +18,9 @@
 
 #define LC log4cpp::Category::getInstance(m_logcat)
 
-ac_protocol::ac_protocol(comm_client_factory::client_type_t cc_type, const char * log_category)
-: m_logcat(log_category), m_id(-1), m_parties(0), m_run_flag(false)
-, m_cc( comm_client_factory::create_comm_client(cc_type, ((m_logcat + '.') + "cc").c_str()))
+ac_protocol::ac_protocol(comm_client_factory::client_type_t cc_type, comm_client::cc_args_t * cc_args)
+: m_logcat(cc_args->logcat), m_id(-1), m_parties(0), m_run_flag(false)
+, m_cc( comm_client_factory::create_comm_client(cc_type, cc_args))
 , m_evt_q(NULL), m_msg_evt_q(NULL), m_con_evt_q(NULL)
 {
 }

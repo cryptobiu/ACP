@@ -1,7 +1,7 @@
 
 #pragma once
 
-class comm_client;
+#include "comm_client.h"
 
 namespace comm_client_factory
 {
@@ -12,5 +12,5 @@ namespace comm_client_factory
 		cc_tcp_proxy = 2,
 	}client_type_t;
 
-	comm_client * create_comm_client(const client_type_t type, const char * log_category);
+	comm_client * create_comm_client(const client_type_t type, comm_client::cc_args_t * args);
 };

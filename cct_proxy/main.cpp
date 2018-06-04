@@ -29,7 +29,9 @@ int main(int argc, char *argv[])
 	cct_proxy_service::client_t clnt;
 	cct_proxy_service::service_t svc;
 	get_options(argc, argv, clnt, svc, log_level);
-	init_log("cct_proxy.log", "./", log_level, "cctp");
+	char log_file[32];
+	snprintf(log_file, 32, "cct_proxy_%u.log", clnt.id);
+	init_log(log_file, "./logs", log_level, "cctp");
 
 	cct_proxy_service proxy("cctp");
 	proxy.serve(svc, clnt);
@@ -80,7 +82,7 @@ void get_options(int argc, char *argv[], cct_proxy_service::client_t & clnt, cct
 }
 
 void show_usage(const char * prog)
-{//hi:c:f:a:p:x:d:s:z:l:
+{
 	std::cout << "Usage:" << std::endl;
 	std::cout << prog << "   [ OPTIONS ]" << std::endl;
 	std::cout << "-i   client id" << std::endl;

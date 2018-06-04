@@ -32,8 +32,8 @@
 static const struct timeval zeroto = {0,0};
 static const struct timeval asec = {1,0};
 
-comm_client_tcp_mesh::comm_client_tcp_mesh(const char * log_category)
-: comm_client(log_category), the_base(NULL)
+comm_client_tcp_mesh::comm_client_tcp_mesh(comm_client::cc_args_t * args)
+: comm_client(args), the_base(NULL)
 {
 }
 

@@ -19,8 +19,8 @@
 #include <event2/event.h>
 
 #include "comm_client_cb_api.h"
-#include "comm_client_factory.h"
 #include "comm_client.h"
+#include "comm_client_factory.h"
 #include "lfq.h"
 #include "ac_protocol.h"
 #include "cc_coin_toss.h"
@@ -30,8 +30,8 @@
 
 #define LC log4cpp::Category::getInstance(m_logcat)
 
-cc_coin_toss::cc_coin_toss(const char * log_category)
-: ac_protocol(comm_client_factory::cc_tcp_mesh, log_category), m_rounds(0)
+cc_coin_toss::cc_coin_toss(const comm_client_factory::client_type_t cc_type, comm_client::cc_args_t * cc_args)
+: ac_protocol(cc_type, cc_args), m_rounds(0)
 {
 }
 
@@ -41,6 +41,7 @@ cc_coin_toss::~cc_coin_toss()
 
 int cc_coin_toss::run(const size_t id, const size_t parties, const char * conf_file, const size_t rounds, const size_t idle_timeout_seconds)
 {
+	LC.notice("%s: running protocol.", __FUNCTION__);
 	m_rounds = rounds;
 	return ac_protocol::run_ac_protocol(id, parties, conf_file, idle_timeout_seconds);
 }

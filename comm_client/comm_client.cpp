@@ -22,8 +22,8 @@ void * comm_client_proc(void * arg)
 }
 
 
-comm_client::comm_client(const char * log_category)
-: m_logcat(log_category), m_id((unsigned int)-1), m_peer_count(0), m_sink(NULL), m_runner(0)
+comm_client::comm_client(cc_args_t * cc_args)
+: m_logcat(cc_args->logcat), m_id((unsigned int)-1), m_peer_count(0), m_sink(NULL), m_runner(0)
 {
 	sem_init(&m_run_flag, 0, 0);
 }

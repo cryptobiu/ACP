@@ -2,6 +2,7 @@
 #pragma once
 
 #include <semaphore.h>
+#include <string>
 
 class comm_client_cb_api;
 
@@ -22,7 +23,19 @@ protected:
 	void set_run_flag(bool);
 
 public:
-	comm_client(const char * log_category);
+
+	typedef struct __cc_args
+	{
+		std::string logcat;
+		std::string proxy_addr;
+		u_int16_t proxy_port;
+
+		__cc_args()
+		: proxy_port(0)
+		{}
+	}cc_args_t;
+
+	comm_client(cc_args_t * cc_args);
 	virtual ~comm_client();
 
 	virtual int start(const unsigned int id, const unsigned int peer_count, const char * comm_conf_file, comm_client_cb_api * sink);

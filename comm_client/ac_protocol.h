@@ -54,7 +54,7 @@ protected:
 	virtual int post_run() = 0;
 
 public:
-	ac_protocol(comm_client_factory::client_type_t cc_type, const char * log_category);
+	ac_protocol(comm_client_factory::client_type_t cc_type, comm_client::cc_args_t * cc_args);
 	virtual ~ac_protocol();
 
 	virtual int run_ac_protocol(const size_t id, const size_t parties, const char * conf_file, const size_t idle_timeout_seconds);

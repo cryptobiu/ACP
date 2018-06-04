@@ -8,6 +8,7 @@ INCLUDE_DIRECTORIES(
 )
 
 set(SOURCE_FILES
+	cct_proxy_service.cpp
 	main.cpp
 )
 
@@ -18,5 +19,6 @@ add_executable(cct_proxy ${SOURCE_FILES})
 
 target_link_libraries( cct_proxy
 	commclient
+	event
 	log4cpp
 )
