@@ -116,38 +116,20 @@ int ac_protocol::run_ac_protocol(const size_t id, const size_t parties, const ch
 
 	{
 		ac_protocol::comm_evt * p;
-		for(size_t i = 0; i < parties; ++i)
-		{
-			if(0 == m_evt_q->pop(p, 10))
-				delete p;
-			else
-				break;
-		}
-		delete m_msg_evt_q;
+		while(0 == m_evt_q->pop(p, 10)) delete p;
+		delete m_evt_q;
 	}
 
 
 	{
 		ac_protocol::comm_msg_evt * p;
-		for(size_t i = 0; i < parties; ++i)
-		{
-			if(0 == m_msg_evt_q->pop(p, 10))
-				delete p;
-			else
-				break;
-		}
+		while(0 == m_msg_evt_q->pop(p, 10)) delete p;
 		delete m_msg_evt_q;
 	}
 
 	{
 		ac_protocol::comm_conn_evt * p;
-		for(size_t i = 0; i < parties; ++i)
-		{
-			if(0 == m_con_evt_q->pop(p, 10))
-				delete p;
-			else
-				break;
-		}
+		while(0 == m_con_evt_q->pop(p, 10)) delete p;
 		delete m_con_evt_q;
 	}
 
