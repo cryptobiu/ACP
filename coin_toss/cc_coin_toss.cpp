@@ -21,6 +21,7 @@
 #include "comm_client_cb_api.h"
 #include "comm_client_factory.h"
 #include "comm_client.h"
+#include "lfq.h"
 #include "ac_protocol.h"
 #include "cc_coin_toss.h"
 
