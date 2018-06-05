@@ -100,6 +100,7 @@ int ac_protocol::run_ac_protocol(const size_t id, const size_t parties, const ch
 	{
 		if(0 == m_evt_q->pop(pevt, 1000))
 		{
+			clock_gettime(CLOCK_REALTIME, &idle_since);
 			handle_comm_event(pevt);
 		}
 		else
