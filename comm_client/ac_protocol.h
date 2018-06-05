@@ -35,13 +35,14 @@ protected:
 		std::vector< u_int8_t > msg;
 	};
 
-	lfq< ac_protocol::comm_evt * > * m_evt_q;
-	lfq< ac_protocol::comm_msg_evt * > * m_msg_evt_q;
-	lfq< ac_protocol::comm_conn_evt * > * m_con_evt_q;
+	pthread_mutex_t m_q_lock, m_e_lock;
+	pthread_cond_t m_comm_e;
+	std::list< ac_protocol::comm_evt * > m_comm_q;
 
 	void push_comm_event(comm_evt * evt);
 	void report_party_comm(const size_t party_id, const bool comm);
 
+	bool handle_comm_events();
 	void handle_comm_event(comm_evt * evt);
 	void handle_conn_event(comm_evt * evt);
 	void handle_msg_event(comm_evt * evt);
