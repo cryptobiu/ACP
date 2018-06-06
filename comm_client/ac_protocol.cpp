@@ -113,6 +113,7 @@ int ac_protocol::run_ac_protocol(const size_t id, const size_t parties, const ch
 			}
 		}
 	}
+	sleep(60);
 	m_cc->stop();
 
 	{
