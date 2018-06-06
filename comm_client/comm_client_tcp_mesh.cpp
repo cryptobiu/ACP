@@ -15,6 +15,9 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+
 
 #include <log4cpp/Category.hh>
 #include <event2/event.h>
@@ -62,6 +65,12 @@ int comm_client_tcp_mesh::start(const unsigned int id, const unsigned int peer_c
 	m_peer_count = peer_count;
 	m_comm_conf_file = comm_conf_file;
 	m_sink = sink;
+
+	if(0 != insure_resource_limits())
+	{
+		LC.error("%s: failed to insure adequate resource limits.", __FUNCTION__);
+		return -1;
+	}
 
 	struct timespec ts;
 	clock_gettime(CLOCK_REALTIME, &ts);
@@ -266,6 +275,59 @@ int comm_client_tcp_mesh::parse_address(const char * address, std::string & ip, 
 		return 0;
 	}
 	return -1;
+}
+
+int comm_client_tcp_mesh::insure_resource_limits()
+{
+	rlim_t required_fds = 10 + 3 * m_peer_count;
+	struct rlimit fd_limit;
+	if(0 == getrlimit(RLIMIT_NOFILE, &fd_limit))
+	{
+		if(fd_limit.rlim_max > required_fds)
+		{
+			LC.info("%s: file descriptors hard limit = %lu / required = %lu.",
+					__FUNCTION__, fd_limit.rlim_max, required_fds);
+
+			if(fd_limit.rlim_cur > required_fds)
+			{
+				LC.info("%s: file descriptors soft limit = %lu / required = %lu.",
+						__FUNCTION__, fd_limit.rlim_cur, required_fds);
+			}
+			else
+			{
+				LC.info("%s: file descriptors soft limit = %lu / required = %lu; trying to raise the limit.",
+						__FUNCTION__, fd_limit.rlim_cur, required_fds);
+
+				fd_limit.rlim_cur = required_fds;
+				if(0 == setrlimit(RLIMIT_NOFILE, &fd_limit))
+				{
+					LC.info("%s: file descriptors soft limit successfully set to %lu.",
+							__FUNCTION__, fd_limit.rlim_cur);
+				}
+				else
+				{
+					LC.error("%s: file descriptors soft limit failed to be set to %lu.",
+							__FUNCTION__, fd_limit.rlim_cur);
+					return -1;
+				}
+			}
+		}
+		else
+		{
+			LC.error("%s: not enough available file descriptors - hard limit = %lu / required = %lu.",
+					 __FUNCTION__, fd_limit.rlim_max, required_fds);
+			return -1;
+		}
+	}
+	else
+    {
+        int errcode = errno;
+        char errmsg[256];
+        LC.error("%s: getrlimit() failed with error %d : [%s].",
+        		__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
+        return -1;
+    }
+	return 0;
 }
 
 int comm_client_tcp_mesh::start_service()
