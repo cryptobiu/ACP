@@ -27,7 +27,7 @@
 void test_tcp_mesh_coin_toss(const unsigned int id, const unsigned int count, const char * party_file, const size_t rounds, const char * logcat)
 {
 	comm_client::cc_args_t cc_args;
-	cc_args.logcat = ((std::string() + '.') + "ctm");
+	cc_args.logcat = std::string(logcat) + ".ctm";
 	cc_coin_toss cct(comm_client_factory::cc_tcp_mesh, &cc_args);
 	if(0 != cct.run(id, count, party_file, rounds, 60))
 		log4cpp::Category::getInstance(logcat).error("%s: %lu round tcp mesh coin toss test failed.", __FUNCTION__, rounds);
