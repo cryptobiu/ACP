@@ -1,4 +1,5 @@
 
+#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -226,6 +227,7 @@ int ac_protocol::run_ac_protocol(const size_t id, const size_t parties, const ch
  	        		__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
  		}
 	}
+	sleep(60);
 	m_cc->stop();
 	for(std::list< ac_protocol::comm_evt * >::iterator i = m_comm_q.begin(); i != m_comm_q.end(); ++i)
 		delete *i;
