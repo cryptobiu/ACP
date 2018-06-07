@@ -18,7 +18,6 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
-
 #include <log4cpp/Category.hh>
 #include <event2/event.h>
 

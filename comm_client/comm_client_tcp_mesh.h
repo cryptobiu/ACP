@@ -3,21 +3,21 @@
 
 #include <event2/util.h>
 
-typedef struct
-{
-	unsigned int id;
-	int sockfd;
-	int out_pipe[2];
-	std::string ip;
-	u_int16_t port;
-	struct sockaddr_in inet_addr;
-	struct event * reader;
-	struct event * writer;
-	class comm_client_tcp_mesh * client;
-}peer_t;
-
 class comm_client_tcp_mesh : public comm_client
 {
+	typedef struct
+	{
+		size_t id;
+		int sockfd;
+		int out_pipe[2];
+		std::string ip;
+		u_int16_t port;
+		struct sockaddr_in inet_addr;
+		struct event * reader;
+		struct event * writer;
+		class comm_client_tcp_mesh * client;
+	}peer_t;
+
 	std::vector< peer_t > m_peers;
 	struct event_base * the_base;
 	void run();
