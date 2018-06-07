@@ -1,5 +1,6 @@
 
 #include <stdlib.h>
+#include <netinet/in.h>
 
 #include <string>
 #include <vector>

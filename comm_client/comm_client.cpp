@@ -9,6 +9,8 @@
 
 #ifdef __ANDROID__
 
+#include <pthread.h>
+
 #include <android/log.h>
 
 #define lc_fatal(...) __android_log_print(ANDROID_LOG_FATAL,m_logcat.c_str(),__VA_ARGS__)
@@ -101,11 +103,20 @@ void comm_client::stop()
 	}
 	set_run_flag(false);
 
+    void * return_code = NULL;
+#ifdef __ANDROID__
+    int result = pthread_join(m_runner, &return_code);
+	if(0 != result)
+	{
+		char errmsg[512];
+		lc_error("%s: pthread_join() failed with error %d : %s", __FUNCTION__, result, strerror_r(result, errmsg, 512));
+        pthread_kill(m_runner, SIGABRT);
+	}
+#else
 	struct timespec timeout;
 	clock_gettime(CLOCK_REALTIME, &timeout);
 	timeout.tv_sec += 5;
 
-	void * return_code = NULL;
 	int result = pthread_timedjoin_np(m_runner, &return_code, &timeout);
 	if(0 != result)
 	{
@@ -119,6 +130,7 @@ void comm_client::stop()
 			lc_error("%s: pthread_cancel() failed with error %d : %s", __FUNCTION__, result, strerror_r(result, errmsg, 512));
 		}
 	}
+#endif
 
 	struct timespec ts;
 	clock_gettime(CLOCK_REALTIME, &ts);

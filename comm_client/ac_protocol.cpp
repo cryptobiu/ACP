@@ -11,6 +11,8 @@
 
 #ifdef __ANDROID__
 
+#include <pthread.h>
+
 #include <android/log.h>
 
 #define lc_fatal(...) __android_log_print(ANDROID_LOG_FATAL,m_logcat.c_str(),__VA_ARGS__)
