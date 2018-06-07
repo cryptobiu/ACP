@@ -15,7 +15,30 @@
 #include <sys/socket.h>
 #include <sys/uio.h>
 
+#ifdef __ANDROID__
+
+#include <android/log.h>
+
+#define lc_fatal(...) __android_log_print(ANDROID_LOG_FATAL,m_logcat.c_str(),__VA_ARGS__)
+#define lc_error(...) __android_log_print(ANDROID_LOG_ERROR,m_logcat.c_str(),__VA_ARGS__)
+#define lc_warn(...) __android_log_print(ANDROID_LOG_WARN,m_logcat.c_str(),__VA_ARGS__)
+#define lc_notice(...) __android_log_print(ANDROID_LOG_INFO,m_logcat.c_str(),__VA_ARGS__)
+#define lc_info(...) __android_log_print(ANDROID_LOG_INFO,m_logcat.c_str(),__VA_ARGS__)
+#define lc_debug(...) __android_log_print(ANDROID_LOG_DEBUG,m_logcat.c_str(),__VA_ARGS__)
+
+#else
+
 #include <log4cpp/Category.hh>
+
+#define lc_fatal(...) log4cpp::Category::getInstance(m_logcat).error(__VA_ARGS__)
+#define lc_error(...) log4cpp::Category::getInstance(m_logcat).error(__VA_ARGS__)
+#define lc_warn(...) log4cpp::Category::getInstance(m_logcat).warn(__VA_ARGS__)
+#define lc_notice(...) log4cpp::Category::getInstance(m_logcat).notice(__VA_ARGS__)
+#define lc_info(...) log4cpp::Category::getInstance(m_logcat).info(__VA_ARGS__)
+#define lc_debug(...) log4cpp::Category::getInstance(m_logcat).debug(__VA_ARGS__)
+
+#endif
+
 #include <event2/event.h>
 
 #include "comm_client.h"
@@ -25,8 +48,6 @@
 
 #define PPRDFD	0
 #define PPWRFD	1
-
-#define LC log4cpp::Category::getInstance(m_logcat)
 
 static const struct timeval naught = {0,0};
 static const struct timeval _50ms_ = {0,50000};
@@ -83,9 +104,9 @@ void cct_proxy_client::run()
 					{
 						if(0 == event_add(m_timer, &_50ms_))
 						{
-							LC.notice("%s: starting event loop.", __FUNCTION__);
+							lc_notice("%s: starting event loop.", __FUNCTION__);
 							event_base_dispatch(m_base);
-							LC.notice("%s: event loop stopped.", __FUNCTION__);
+							lc_notice("%s: event loop stopped.", __FUNCTION__);
 
 							if(NULL != m_write)
 							{
@@ -102,13 +123,13 @@ void cct_proxy_client::run()
 							event_del(m_timer);
 						}
 						else
-							LC.error("%s: timer event addition failed.", __FUNCTION__);
+							lc_error("%s: timer event addition failed.", __FUNCTION__);
 
 						event_free(m_timer);
 						m_timer = NULL;
 					}
 					else
-						LC.error("%s: timer event allocation failed.", __FUNCTION__);
+						lc_error("%s: timer event allocation failed.", __FUNCTION__);
 
 					close(m_out_pipe[PPRDFD]);
 					m_out_pipe[PPRDFD] = -1;
@@ -119,24 +140,24 @@ void cct_proxy_client::run()
 				{
 		            int errcode = errno;
 		            char errmsg[256];
-		            LC.error("%s: pipe() failed with error %d : [%s].", __FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
+		            lc_error("%s: pipe() failed with error %d : [%s].", __FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
 				}
 
 				event_del(m_read);
 			}
 			else
-				LC.error("%s: connect event addition failed.", __FUNCTION__);
+				lc_error("%s: connect event addition failed.", __FUNCTION__);
 
 			event_free(m_read);
 			m_read = NULL;
 		}
 		else
-			LC.error("%s: connect event allocation failed.", __FUNCTION__);
+			lc_error("%s: connect event allocation failed.", __FUNCTION__);
 		event_base_free(m_base);
 		m_base = NULL;
 	}
 	else
-		LC.error("%s: event base allocation failed.", __FUNCTION__);
+		lc_error("%s: event base allocation failed.", __FUNCTION__);
 }
 
 int cct_proxy_client::send(const unsigned int dst_id, const unsigned char * msg, const size_t size)
@@ -145,7 +166,7 @@ int cct_proxy_client::send(const unsigned int dst_id, const unsigned char * msg,
 	u_int8_t mask = 0x01 << (dst_id%8);
 	if(0 == (m_peer_mask[offset] & mask))
 	{
-		LC.warn("%s: rejected a message to disconnected peer %u.", __FUNCTION__, dst_id);
+		lc_warn("%s: rejected a message to disconnected peer %u.", __FUNCTION__, dst_id);
 		return -1;
 	}
 
@@ -168,17 +189,17 @@ int cct_proxy_client::send(const unsigned int dst_id, const unsigned char * msg,
 		{
 			int errcode = errno;
 			char errmsg[512];
-			LC.error("%s: writev() failed with error %d : [%s].", __FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
+			lc_error("%s: writev() failed with error %d : [%s].", __FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
 	        exit(-__LINE__);
 		}
 		else
 		{
-			LC.error("%s: writev() partial write of %lu out of %lu.", __FUNCTION__, (size_t)nwrit, (sizeof(proxy_msg_t) + size));
+			lc_error("%s: writev() partial write of %lu out of %lu.", __FUNCTION__, (size_t)nwrit, (sizeof(proxy_msg_t) + size));
 	        exit(-__LINE__);
 		}
 	}
 	else
-		LC.debug("%s: %lu bytes written to out pipe.", __FUNCTION__, (size_t)nwrit);
+		lc_debug("%s: %lu bytes written to out pipe.", __FUNCTION__, (size_t)nwrit);
 	return 0;
 }
 
@@ -192,14 +213,14 @@ void cct_proxy_client::on_connect()
 		m_read = event_new(m_base, m_sockfd, EV_READ|EV_PERSIST, read_cb, this);
 		if(0 != event_add(m_read, NULL))
 		{
-			LC.error("%s: read event addition failed.", __FUNCTION__);
+			lc_error("%s: read event addition failed.", __FUNCTION__);
 			exit(-__LINE__);
 		}
 
 		m_write = event_new(m_base, m_out_pipe[PPRDFD], EV_READ, write1_cb, this);
 		if(0 != event_add(m_write, NULL))
 		{
-			LC.error("%s: write event addition failed.", __FUNCTION__);
+			lc_error("%s: write event addition failed.", __FUNCTION__);
 			exit(-__LINE__);
 		}
 	}
@@ -207,7 +228,7 @@ void cct_proxy_client::on_connect()
 	{
 		if(0 != event_add(m_read, &_1sec_))
 		{
-			LC.error("%s: connect event addition failed.", __FUNCTION__);
+			lc_error("%s: connect event addition failed.", __FUNCTION__);
 			exit(-__LINE__);
 		}
 	}
@@ -217,7 +238,7 @@ void cct_proxy_client::on_timer()
 {
 	if(!get_run_flag())
 	{
-		LC.debug("%s: run flag down; breaking event loop.", __FUNCTION__);
+		lc_debug("%s: run flag down; breaking event loop.", __FUNCTION__);
 		event_base_loopbreak(m_base);
 	}
 }
@@ -228,18 +249,18 @@ void cct_proxy_client::on_read()
 	ssize_t nread = read(m_sockfd, buffer, 4096);
 	if(0 < nread)
 	{
-		LC.debug("%s: read %ld bytes.", __FUNCTION__, nread);
+		lc_debug("%s: read %ld bytes.", __FUNCTION__, nread);
 		m_data.insert(m_data.end(), buffer, buffer + nread);
 		process_messages();
 		return;
 	}
 	else if(0 == nread)
-		LC.notice("%s: read 0 bytes; disconnection.", __FUNCTION__);
+		lc_notice("%s: read 0 bytes; disconnection.", __FUNCTION__);
 	else
 	{
 		int errcode = errno;
 		char errmsg[512];
-        LC.error("%s: read() failed with error %d : [%s].", __FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
+        lc_error("%s: read() failed with error %d : [%s].", __FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
 	}
 
 	m_data.clear();
@@ -255,12 +276,12 @@ void cct_proxy_client::on_read()
 	m_read = event_new(m_base, -1, EV_TIMEOUT, connect_cb, this);
 	if(NULL == m_read)
 	{
-		LC.error("%s: read event allocation failed.", __FUNCTION__);
+		lc_error("%s: read event allocation failed.", __FUNCTION__);
 		exit(-__LINE__);
 	}
 	if(0 != event_add(m_read, &_1sec_))
 	{
-		LC.error("%s: connect event addition failed.", __FUNCTION__);
+		lc_error("%s: connect event addition failed.", __FUNCTION__);
 		exit(-__LINE__);
 	}
 }
@@ -271,12 +292,12 @@ void cct_proxy_client::on_write1()
 	m_write = event_new(m_base, m_sockfd, EV_WRITE, write2_cb, this);
 	if(NULL == m_write)
 	{
-		LC.error("%s: write event allocation failed.", __FUNCTION__);
+		lc_error("%s: write event allocation failed.", __FUNCTION__);
 		exit(-__LINE__);
 	}
 	if(0 != event_add(m_write, NULL))
 	{
-		LC.error("%s: write event addition failed.", __FUNCTION__);
+		lc_error("%s: write event addition failed.", __FUNCTION__);
 		exit(-__LINE__);
 	}
 }
@@ -291,8 +312,8 @@ void cct_proxy_client::on_write2()
 	{
 		int errcode = errno;
 		char errmsg[512];
-        LC.error("%s: splice() failed with error %d : [%s].", __FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
-    	LC.info("%s: disconnecting.", __FUNCTION__);
+        lc_error("%s: splice() failed with error %d : [%s].", __FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
+    	lc_info("%s: disconnecting.", __FUNCTION__);
 
     	m_data.clear();
     	close(m_sockfd);
@@ -303,28 +324,28 @@ void cct_proxy_client::on_write2()
     	m_read = event_new(m_base, -1, EV_TIMEOUT, connect_cb, this);
     	if(NULL == m_read)
     	{
-    		LC.error("%s: read event allocation failed.", __FUNCTION__);
+    		lc_error("%s: read event allocation failed.", __FUNCTION__);
     		exit(-__LINE__);
     	}
     	if(0 != event_add(m_read, &_1sec_))
     	{
-    		LC.error("%s: connect event addition failed.", __FUNCTION__);
+    		lc_error("%s: connect event addition failed.", __FUNCTION__);
     		exit(-__LINE__);
     	}
 	}
 	else
 	{
-		LC.debug("%s: %d bytes spliced out to conn.", __FUNCTION__, result);
+		lc_debug("%s: %d bytes spliced out to conn.", __FUNCTION__, result);
 
 		m_write = event_new(m_base, m_out_pipe[PPRDFD], EV_READ, write1_cb, this);
 		if(NULL == m_write)
 		{
-			LC.error("%s: write event allocation failed.", __FUNCTION__);
+			lc_error("%s: write event allocation failed.", __FUNCTION__);
 			exit(-__LINE__);
 		}
 		if(0 != event_add(m_write, NULL))
 		{
-			LC.error("%s: write event addition failed.", __FUNCTION__);
+			lc_error("%s: write event addition failed.", __FUNCTION__);
 			exit(-__LINE__);
 		}
 	}
@@ -334,7 +355,7 @@ int cct_proxy_client::make_connection()
 {
 	if (0 <= (m_sockfd = socket(AF_INET, SOCK_STREAM, 0)))
 	{
-		LC.debug("%s: socket created %d.", __FUNCTION__, m_sockfd);
+		lc_debug("%s: socket created %d.", __FUNCTION__, m_sockfd);
 
 		struct sockaddr_in sockaddr;
 		if (0 != inet_aton(m_proxy_addr.c_str(), &sockaddr.sin_addr))
@@ -344,7 +365,7 @@ int cct_proxy_client::make_connection()
 
 			if(0 == connect(m_sockfd, (const struct sockaddr *)&sockaddr, sizeof(struct sockaddr_in)))
 			{
-				LC.notice("%s: socket %d connected to [%s:%hu].", __FUNCTION__, m_sockfd, m_proxy_addr.c_str(), m_proxy_port);
+				lc_notice("%s: socket %d connected to [%s:%hu].", __FUNCTION__, m_sockfd, m_proxy_addr.c_str(), m_proxy_port);
 
 				proxy_msg_t cdm;
 				ssize_t nread = read(m_sockfd, &cdm, sizeof(proxy_msg_t));
@@ -353,33 +374,33 @@ int cct_proxy_client::make_connection()
 					cdm.ntoh();
 					if(MSG_TYPE_CDM == cdm.type)
 					{
-						LC.notice("%s: client details from proxy service: id=%u; count=%u;.", __FUNCTION__, cdm.id, cdm.param);
+						lc_notice("%s: client details from proxy service: id=%u; count=%u;.", __FUNCTION__, cdm.id, cdm.param);
 						if(cdm.id == this->m_id && cdm.param == this->m_peer_count)
 							return 0;
 						else
-							LC.error("%s: proxy service client details mismatch.", __FUNCTION__);
+							lc_error("%s: proxy service client details mismatch.", __FUNCTION__);
 					}
 					else
-						LC.error("%s: read message is not a client details message; type = %u.", __FUNCTION__, cdm.type);
+						lc_error("%s: read message is not a client details message; type = %u.", __FUNCTION__, cdm.type);
 				}
 				else if(0 > nread)
 				{
 					int errcode = errno;
 					char errmsg[512];
-			        LC.error("%s: read() failed with error %d : [%s].", __FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
+			        lc_error("%s: read() failed with error %d : [%s].", __FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
 				}
 				else
-					LC.error("%s: failure reading client details message on connection; %ld bytes read.", __FUNCTION__, nread);
+					lc_error("%s: failure reading client details message on connection; %ld bytes read.", __FUNCTION__, nread);
 			}
 			else
 			{
 				int errcode = errno;
 				char errmsg[512];
-		        LC.error("%s: connect() failed with error %d : [%s].", __FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
+		        lc_error("%s: connect() failed with error %d : [%s].", __FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
 			}
 	    }
 		else
-			LC.error("%s: failure converting proxy IP address <%s>.", __FUNCTION__, m_proxy_addr.c_str());
+			lc_error("%s: failure converting proxy IP address <%s>.", __FUNCTION__, m_proxy_addr.c_str());
 
 		close(m_sockfd);
 		m_sockfd = -1;
@@ -388,7 +409,7 @@ int cct_proxy_client::make_connection()
 	{
 		int errcode = errno;
 		char errmsg[512];
-        LC.error("%s: socket() failed with error %d : [%s].", __FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
+        lc_error("%s: socket() failed with error %d : [%s].", __FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
 	}
 	return -1;
 }
@@ -433,7 +454,7 @@ int cct_proxy_client::process_messages()
 			}
 			break;
 		default:
-			LC.error("%s: invalid message type %u.", __FUNCTION__, hdr.type);
+			lc_error("%s: invalid message type %u.", __FUNCTION__, hdr.type);
 			exit(-__LINE__);
 		}
 	}
