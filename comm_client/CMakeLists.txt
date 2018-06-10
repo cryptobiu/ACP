@@ -3,9 +3,6 @@ project(commclient)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++0x")
 
-INCLUDE_DIRECTORIES(
-)
-
 set(SOURCE_FILES
 	ac_protocol.cpp
 	cct_proxy_client.cpp
@@ -17,6 +14,8 @@ set(SOURCE_FILES
 
 add_library(commclient SHARED ${SOURCE_FILES})
 
-target_link_libraries( commclient
+target_link_libraries(
+	commclient
 	event
+	pthread
 )
