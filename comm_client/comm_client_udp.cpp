@@ -137,9 +137,20 @@ int comm_client_udp::send(const unsigned int dst_id, const unsigned char * msg, 
 		lc_error("%s: max msg size %lu exceeded: %lu.", __FUNCTION__, max_msg_size, size);
 		return -1;
 	}
+
 	msg_t * pmsg = new msg_t;
 	pmsg->id = dst_id;
 	pmsg->data.assign(msg, msg + size);
+
+	static const u_int8_t b = 1;
+	if(1 != write(m_send_pipe[PIPE_WRITE_FD], &b, 1))
+	{
+        int errcode = errno;
+        char errmsg[256];
+        lc_error("%s: write() failed with error %d : [%s].",
+        		__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
+        exit(__LINE__);
+	}
 
 	struct timespec to;
 	clock_gettime(CLOCK_REALTIME, &to);
@@ -148,16 +159,6 @@ int comm_client_udp::send(const unsigned int dst_id, const unsigned char * msg, 
 	int errcode;
 	if(0 == (errcode = pthread_mutex_timedlock(&m_send_lock, &to)))
 	{
-		static const u_int8_t b = 1;
-		if(1 != write(m_send_pipe[PIPE_WRITE_FD], &b, 1))
-		{
-	        int errcode = errno;
-	        char errmsg[256];
-	        lc_error("%s: write() failed with error %d : [%s].",
-	        		__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
-	        exit(__LINE__);
-		}
-
 		m_msg_q.push_back(pmsg);
 
 		if(0 != (errcode = pthread_mutex_unlock(&m_send_lock)))
@@ -515,4 +516,45 @@ void comm_client_udp::perform_msgs_send()
 			}
 		}
 	}
+}
+
+void comm_client_udp::pop_queued_msgs(std::deque< msg_t * > & qd_msgs)
+{
+	static u_int8_t buffer[max_msg_size];
+	qd_msgs.clear();
+
+	struct timespec to;
+	clock_gettime(CLOCK_REALTIME, &to);
+	to.tv_sec += 2;
+
+	int errcode;
+	if(0 == (errcode = pthread_mutex_timedlock(&m_send_lock, &to)))
+	{
+		qd_msgs.swap(m_msg_q);
+
+		if(0 != (errcode = pthread_mutex_unlock(&m_send_lock)))
+		{
+	        int errcode = errno;
+	        char errmsg[256];
+	        lc_error("%s: pthread_mutex_unlock() failed with error %d : [%s].",
+	        		__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
+	        exit(__LINE__);
+		}
+
+		if(0 > read(m_send_pipe[PIPE_READ_FD], buffer, qd_msgs.size()))
+		{
+	        int errcode = errno;
+	        char errmsg[256];
+	        lc_error("%s: read() failed with error %d : [%s].",
+	        		__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
+		}
+	}
+	else
+	{
+        int errcode = errno;
+        char errmsg[256];
+        lc_error("%s: pthread_mutex_timedlock() failed with error %d : [%s].",
+        		__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
+	}
+	return;
 }
