@@ -22,6 +22,8 @@ protected:
 	bool get_run_flag();
 	void set_run_flag(bool);
 
+	static int parse_address(const char * address, std::string & ip, u_int16_t & port, struct sockaddr_in & sockaddr);
+
 public:
 
 	typedef struct __cc_args

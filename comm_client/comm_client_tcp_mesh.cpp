@@ -18,19 +18,6 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
-#ifdef __ANDROID__
-
-#include <android/log.h>
-
-#define lc_fatal(...) __android_log_print(ANDROID_LOG_FATAL,m_logcat.c_str(),__VA_ARGS__)
-#define lc_error(...) __android_log_print(ANDROID_LOG_ERROR,m_logcat.c_str(),__VA_ARGS__)
-#define lc_warn(...) __android_log_print(ANDROID_LOG_WARN,m_logcat.c_str(),__VA_ARGS__)
-#define lc_notice(...) __android_log_print(ANDROID_LOG_INFO,m_logcat.c_str(),__VA_ARGS__)
-#define lc_info(...) __android_log_print(ANDROID_LOG_INFO,m_logcat.c_str(),__VA_ARGS__)
-#define lc_debug(...) __android_log_print(ANDROID_LOG_DEBUG,m_logcat.c_str(),__VA_ARGS__)
-
-#else
-
 #include <log4cpp/Category.hh>
 
 #define lc_fatal(...) log4cpp::Category::getInstance(m_logcat).error(__VA_ARGS__)
@@ -39,8 +26,6 @@
 #define lc_notice(...) log4cpp::Category::getInstance(m_logcat).notice(__VA_ARGS__)
 #define lc_info(...) log4cpp::Category::getInstance(m_logcat).info(__VA_ARGS__)
 #define lc_debug(...) log4cpp::Category::getInstance(m_logcat).debug(__VA_ARGS__)
-
-#endif
 
 #include <event2/event.h>
 
@@ -272,29 +257,6 @@ int comm_client_tcp_mesh::load_peers(const unsigned int peer_count)
 		fclose(pf);
 	}
 	return (peer_count == n)? 0: -1;
-}
-
-int comm_client_tcp_mesh::parse_address(const char * address, std::string & ip, u_int16_t & port, struct sockaddr_in & sockaddr)
-{
-	static const char colon = ':';
-	const char * p;
-	for(p = address; p && *p && *p != colon; ++p);
-	if(colon == *p)
-	{
-		ip.assign(address, p);
-		port = (u_int16_t)strtol(p + 1, NULL, 10);
-
-		if (0 == inet_aton(ip.c_str(), &sockaddr.sin_addr))
-	    {
-			lc_error("%s: failure converting IP address <%s>.", __FUNCTION__, ip.c_str());
-	        return -1;
-	    }
-		sockaddr.sin_port = htons(port);
-		sockaddr.sin_family = AF_INET;
-		lc_debug("%s: address=%s;", __FUNCTION__, address);
-		return 0;
-	}
-	return -1;
 }
 
 int comm_client_tcp_mesh::insure_resource_limits()

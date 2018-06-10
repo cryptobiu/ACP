@@ -12,6 +12,7 @@ set(SOURCE_FILES
 	comm_client.cpp
 	comm_client_factory.cpp
 	comm_client_tcp_mesh.cpp
+	comm_client_udp.cpp
 )
 
 add_library(commclient SHARED ${SOURCE_FILES})
