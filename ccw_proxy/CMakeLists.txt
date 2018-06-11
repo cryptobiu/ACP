@@ -9,7 +9,6 @@ INCLUDE_DIRECTORIES(
 )
 
 set(SOURCE_FILES
-	ccw_proxy_service.cpp
 	main.cpp
 )
 

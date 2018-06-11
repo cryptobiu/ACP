@@ -1,133 +1,266 @@
+//
+// Copyright (c) 2016-2017 Vinnie Falco (vinnie dot falco at gmail dot com)
+//
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+// Official repository: https://github.com/boostorg/beast
+//
 
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
+//------------------------------------------------------------------------------
+//
+// Example: WebSocket server, asynchronous
+//
+//------------------------------------------------------------------------------
 
+#include <boost/beast/core.hpp>
+#include <boost/beast/websocket.hpp>
+#include <boost/asio/bind_executor.hpp>
+#include <boost/asio/strand.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <algorithm>
+#include <cstdlib>
+#include <functional>
 #include <iostream>
+#include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
-#include <log4cpp/Category.hh>
-#include <log4cpp/FileAppender.hh>
-#include <log4cpp/SimpleLayout.hh>
-#include <log4cpp/RollingFileAppender.hh>
-#include <log4cpp/SimpleLayout.hh>
-#include <log4cpp/BasicLayout.hh>
-#include <log4cpp/PatternLayout.hh>
-#include <event2/event.h>
+using tcp = boost::asio::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
+namespace websocket = boost::beast::websocket;  // from <boost/beast/websocket.hpp>
 
-#include "boost/beast/core.hpp"
-#include "boost/beast/websocket.hpp"
-#include "boost/asio/bind_executor.hpp"
-#include "boost/asio/strand.hpp"
-#include "boost/asio/ip/tcp.hpp"
+//------------------------------------------------------------------------------
 
-void get_options(int argc, char *argv[], size_t & client_id, size_t & client_cnt, std::string & conf_file, std::string & ipaddr, u_int16_t & port, int & log_level);
-void show_usage(const char * prog);
-void init_log(const char * a_log_file, const char * a_log_dir, const int log_level, const char * logcat);
-
-static const char g_logcat[] = "ccwp";
-int main(int argc, char *argv[])
+// Report a failure
+void
+fail(boost::system::error_code ec, char const* what)
 {
-	int log_level = 500; //notice
-	size_t client_id = (size_t)-1, client_cnt = (size_t)-1;
-	std::string conf_file, ipaddr;
-	u_int16_t port = (u_int16_t)-1;
-	get_options(argc, argv, client_id, client_cnt, conf_file, ipaddr, port, log_level);
-	init_log("cct_proxy.log", "./", log_level, g_logcat);
-
-	auto const ip_address = boost::asio::ip::make_address(ipaddr.c_str());
-	boost::asio::io_context ioc{/*threads*/1};
-
-	return 0;
+    std::cerr << what << ": " << ec.message() << "\n";
 }
 
-
-void get_options(int argc, char *argv[], size_t & client_id, size_t & client_cnt, std::string & conf_file, std::string & ipaddr, u_int16_t & port, int & log_level)
+// Echoes back all received WebSocket messages
+class session : public std::enable_shared_from_this<session>
 {
-	if(argc == 1)
-	{
-		show_usage(argv[0]);
-		exit(0);
-	}
-	int opt;
-	while ((opt = getopt(argc, argv, "hi:c:f:l:")) != -1)
-	{
-		switch (opt)
-		{
-		case 'h':
-			show_usage(argv[0]);
-			exit(0);
-		case 'i':
-			client_id = (unsigned int)strtol(optarg, NULL, 10);
-			break;
-		case 'c':
-			client_cnt = (unsigned int)strtol(optarg, NULL, 10);
-			break;
-		case 'f':
-			conf_file = optarg;
-			break;
-		case 'a':
-			ipaddr = optarg;
-			break;
-		case 'p':
-			port = (u_int16_t)strtol(optarg, NULL, 10);
-			break;
-		case 'l':
-			log_level = (int)strtol(optarg, NULL, 10);
-			break;
-		default:
-			std::cerr << "Invalid program arguments." << std::endl;
-			show_usage(argv[0]);
-			exit(__LINE__);
-		}
-	}
-}
+    websocket::stream<tcp::socket> ws_;
+    boost::asio::strand<boost::asio::io_context::executor_type> strand_;
+    boost::beast::multi_buffer buffer_;
 
-void show_usage(const char * prog)
-{
-	std::cout << "Usage:" << std::endl;
-	std::cout << prog << "   [ OPTIONS ]" << std::endl;
-	std::cout << "-i   client id" << std::endl;
-	std::cout << "-c   peer count" << std::endl;
-	std::cout << "-f   peer address file" << std::endl;
-	std::cout << "-a   service address" << std::endl;
-	std::cout << "-p   service port" << std::endl;
-	std::cout << "-l   log level" << std::endl;
-}
-
-void init_log(const char * a_log_file, const char * a_log_dir, const int log_level, const char * logcat)
-{
-	static const char the_layout[] = "%d{%y-%m-%d %H:%M:%S.%l}| %-6p | %-15c | %m%n";
-
-	std::string log_file = a_log_file;
-	log_file.insert(0, "/");
-	log_file.insert(0, a_log_dir);
-
-    log4cpp::Layout * log_layout = NULL;
-    log4cpp::Appender * appender = new log4cpp::RollingFileAppender("rlf.appender", log_file.c_str(), 10*1024*1024, 5);
-
-    bool pattern_layout = false;
-    try
+public:
+    // Take ownership of the socket
+    explicit
+    session(tcp::socket socket)
+        : ws_(std::move(socket))
+        , strand_(ws_.get_executor())
     {
-        log_layout = new log4cpp::PatternLayout();
-        ((log4cpp::PatternLayout *)log_layout)->setConversionPattern(the_layout);
-        appender->setLayout(log_layout);
-        pattern_layout = true;
-    }
-    catch(...)
-    {
-        pattern_layout = false;
     }
 
-    if(!pattern_layout)
+    // Start the asynchronous operation
+    void
+    run()
     {
-        log_layout = new log4cpp::BasicLayout();
-        appender->setLayout(log_layout);
+        // Accept the websocket handshake
+        ws_.async_accept(
+            boost::asio::bind_executor(
+                strand_,
+                std::bind(
+                    &session::on_accept,
+                    shared_from_this(),
+                    std::placeholders::_1)));
     }
 
-    log4cpp::Category::getInstance(logcat).addAppender(appender);
-    log4cpp::Category::getInstance(logcat).setPriority((log4cpp::Priority::PriorityLevel)log_level);
-    log4cpp::Category::getInstance(logcat).notice("log start");
-}
+    void
+    on_accept(boost::system::error_code ec)
+    {
+        if(ec)
+            return fail(ec, "accept");
 
+        // Read a message
+        do_read();
+    }
+
+    void
+    do_read()
+    {
+        // Read a message into our buffer
+        ws_.async_read(
+            buffer_,
+            boost::asio::bind_executor(
+                strand_,
+                std::bind(
+                    &session::on_read,
+                    shared_from_this(),
+                    std::placeholders::_1,
+                    std::placeholders::_2)));
+    }
+
+    void
+    on_read(
+        boost::system::error_code ec,
+        std::size_t bytes_transferred)
+    {
+        boost::ignore_unused(bytes_transferred);
+
+        // This indicates that the session was closed
+        if(ec == websocket::error::closed)
+            return;
+
+        if(ec)
+            fail(ec, "read");
+
+        // Echo the message
+        ws_.text(ws_.got_text());
+        ws_.async_write(
+            buffer_.data(),
+            boost::asio::bind_executor(
+                strand_,
+                std::bind(
+                    &session::on_write,
+                    shared_from_this(),
+                    std::placeholders::_1,
+                    std::placeholders::_2)));
+    }
+
+    void
+    on_write(
+        boost::system::error_code ec,
+        std::size_t bytes_transferred)
+    {
+        boost::ignore_unused(bytes_transferred);
+
+        if(ec)
+            return fail(ec, "write");
+
+        // Clear the buffer
+        buffer_.consume(buffer_.size());
+
+        // Do another read
+        do_read();
+    }
+};
+
+//------------------------------------------------------------------------------
+
+// Accepts incoming connections and launches the sessions
+class listener : public std::enable_shared_from_this<listener>
+{
+    tcp::acceptor acceptor_;
+    tcp::socket socket_;
+
+public:
+    listener(
+        boost::asio::io_context& ioc,
+        tcp::endpoint endpoint)
+        : acceptor_(ioc)
+        , socket_(ioc)
+    {
+        boost::system::error_code ec;
+
+        // Open the acceptor
+        acceptor_.open(endpoint.protocol(), ec);
+        if(ec)
+        {
+            fail(ec, "open");
+            return;
+        }
+
+        // Allow address reuse
+        acceptor_.set_option(boost::asio::socket_base::reuse_address(true));
+        if(ec)
+        {
+            fail(ec, "set_option");
+            return;
+        }
+
+        // Bind to the server address
+        acceptor_.bind(endpoint, ec);
+        if(ec)
+        {
+            fail(ec, "bind");
+            return;
+        }
+
+        // Start listening for connections
+        acceptor_.listen(
+            boost::asio::socket_base::max_listen_connections, ec);
+        if(ec)
+        {
+            fail(ec, "listen");
+            return;
+        }
+    }
+
+    // Start accepting incoming connections
+    void
+    run()
+    {
+        if(! acceptor_.is_open())
+            return;
+        do_accept();
+    }
+
+    void
+    do_accept()
+    {
+        acceptor_.async_accept(
+            socket_,
+            std::bind(
+                &listener::on_accept,
+                shared_from_this(),
+                std::placeholders::_1));
+    }
+
+    void
+    on_accept(boost::system::error_code ec)
+    {
+        if(ec)
+        {
+            fail(ec, "accept");
+        }
+        else
+        {
+            // Create the session and run it
+            std::make_shared<session>(std::move(socket_))->run();
+        }
+
+        // Accept another connection
+        do_accept();
+    }
+};
+
+//------------------------------------------------------------------------------
+
+int main(int argc, char* argv[])
+{
+    // Check command line arguments.
+    if (argc != 4)
+    {
+        std::cerr <<
+            "Usage: websocket-server-async <address> <port> <threads>\n" <<
+            "Example:\n" <<
+            "    websocket-server-async 0.0.0.0 8080 1\n";
+        return EXIT_FAILURE;
+    }
+    auto const address = boost::asio::ip::make_address(argv[1]);
+    auto const port = static_cast<unsigned short>(std::atoi(argv[2]));
+    auto const threads = std::max<int>(1, std::atoi(argv[3]));
+
+    // The io_context is required for all I/O
+    boost::asio::io_context ioc{threads};
+
+    // Create and launch a listening port
+    std::make_shared<listener>(ioc, tcp::endpoint{address, port})->run();
+
+    // Run the I/O service on the requested number of threads
+    std::vector<std::thread> v;
+    v.reserve(threads - 1);
+    for(auto i = threads - 1; i > 0; --i)
+        v.emplace_back(
+        [&ioc]
+        {
+            ioc.run();
+        });
+    ioc.run();
+
+    return EXIT_SUCCESS;
+}
