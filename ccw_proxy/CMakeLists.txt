@@ -10,6 +10,7 @@ INCLUDE_DIRECTORIES(
 
 set(SOURCE_FILES
 	main.cpp
+	session.cpp
 )
 
 link_directories(
