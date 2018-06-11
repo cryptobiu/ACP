@@ -1,0 +1,32 @@
+{
+	"$schema": "http://json-schema.org/draft-06/schema#",
+	"title": "ccw_proxy_message",
+	"description": "A comm-client web-proxy protocol message",
+	"type": "object",
+	"properties":
+	{
+		"message_type":
+		{
+            "description": "The message type",
+            "type": "string",
+            "enum": ["CDM", "PCU", "PMS" ]
+        },
+        "id":
+        {
+        	"description": "The party identifier",
+        	"type": "integer",
+        	"minimum": 0
+        },
+        "param":
+        {
+            "description": "A message specific parameter",
+            "type": "string"
+        },
+        "data":
+        {
+            "description": "Optional data",
+            "type": "string"
+        }       
+	},
+	"required": ["message_type", "id", "param"]
+}

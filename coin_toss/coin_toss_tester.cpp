@@ -22,6 +22,7 @@
 
 #include "comm_client_cb_api.h"
 #include "coin_toss_test.h"
+#include "cc_udp_test.h"
 
 void get_options(int argc, char *argv[], size_t & parties, std::string & conf_file, size_t & rounds, int & log_level);
 void show_usage(const char * prog);
@@ -29,6 +30,7 @@ void init_log(const char * a_log_file, const char * a_log_dir, const int log_lev
 
 void run_comm_tcp_mesh_client_test_fork(const size_t parties, const std::string & conf_file, const size_t rounds, const int log_level);
 void run_comm_tcp_proxy_client_test_fork(const size_t parties, const std::string & conf_file, const size_t rounds, const int log_level);
+void run_comm_udp_test_fork(const size_t parties, const std::string & conf_file, const size_t rounds, const int log_level);
 
 int main(int argc, char *argv[]) {
 
@@ -228,3 +230,36 @@ void run_comm_tcp_proxy_client_test_fork(const size_t parties, const std::string
 	}
 }
 //******************************************************************************************//
+void run_comm_udp_test_fork(const size_t parties, const std::string & conf_file, const size_t rounds, const int log_level)
+{
+	pid_t cpid;
+	std::set<pid_t> children_of_the_revolution;
+	char log_category[32];
+	char log_file[32];
+
+	for(size_t i = 0; i < parties; i++)
+	{
+		switch(cpid = fork())
+		{
+		case 0:
+			snprintf(log_category, 32, "ct.tmt.%03lu", i);
+			snprintf(log_file, 32, "udp_test.%03lu.log", i);
+			init_log(log_file, "./logs", log_level, log_category);
+			test_udp_cc(i, parties, conf_file.c_str(), rounds, log_category);
+			exit(0);
+		case -1:
+			{
+				int errcode = errno;
+				char errmsg[512];
+				std::cerr << "fork() failed with error " << errcode << " : [" << strerror_r(errcode, errmsg, 256) << "]" << std::endl;
+				for(std::set<pid_t>::iterator i = children_of_the_revolution.begin(); i != children_of_the_revolution.end(); ++i)
+					kill(*i, 9);
+			}
+			exit(-1);
+		default:
+			std::cout << "cpid: " << cpid << std::endl;
+			children_of_the_revolution.insert(cpid);
+			continue;
+		}
+	}
+}
