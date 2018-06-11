@@ -21,6 +21,33 @@ void fail(boost::system::error_code ec, char const* what);
 
 #include "session.h"
 
+// Take ownership of the socket
+session::session(tcp::socket socket)
+: ws_(std::move(socket)), strand_(ws_.get_executor())
+{
+}
+
+void session::run()
+{
+	// Accept the websocket handshake
+	ws_.async_accept(
+		boost::asio::bind_executor(
+			strand_,
+			std::bind(
+				&session::on_accept,
+				shared_from_this(),
+				std::placeholders::_1)));
+}
+
+void session::on_accept(boost::system::error_code ec)
+{
+	if(ec)
+		return fail(ec, "accept");
+
+	// Read a message
+	do_read();
+}
+
 void session::do_read()
 {
 	// Read a message into our buffer
