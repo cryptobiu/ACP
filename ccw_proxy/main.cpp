@@ -30,14 +30,27 @@
 using tcp = boost::asio::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
 namespace websocket = boost::beast::websocket;  // from <boost/beast/websocket.hpp>
 
+#include <log4cpp/Category.hh>
+#include <log4cpp/FileAppender.hh>
+#include <log4cpp/SimpleLayout.hh>
+#include <log4cpp/RollingFileAppender.hh>
+#include <log4cpp/SimpleLayout.hh>
+#include <log4cpp/BasicLayout.hh>
+#include <log4cpp/PatternLayout.hh>
+
+#define LCAT(X)		log4cpp::Category::getInstance(X)
+
+void init_log(const char * a_log_file, const char * a_log_dir, const int log_level, const char * logcat);
+
 //------------------------------------------------------------------------------
 
 // Report a failure
+/*
 void
 fail(boost::system::error_code ec, char const* what)
 {
-    std::cerr << what << ": " << ec.message() << "\n";
-}
+	std::cerr << what << ": " << ec.message() << "\n";
+}*/
 
 #include "session.h"
 
@@ -48,13 +61,16 @@ class listener : public std::enable_shared_from_this<listener>
 {
     tcp::acceptor acceptor_;
     tcp::socket socket_;
+    std::string cat_;
 
 public:
     listener(
         boost::asio::io_context& ioc,
-        tcp::endpoint endpoint)
+        tcp::endpoint endpoint,
+		const std::string & cat)
         : acceptor_(ioc)
         , socket_(ioc)
+		, cat_(cat)
     {
         boost::system::error_code ec;
 
@@ -62,7 +78,7 @@ public:
         acceptor_.open(endpoint.protocol(), ec);
         if(ec)
         {
-            fail(ec, "open");
+            LCAT(cat_).error("%s: open() failed; error = [%s]", __FUNCTION__, ec.message().c_str());
             return;
         }
 
@@ -70,7 +86,7 @@ public:
         acceptor_.set_option(boost::asio::socket_base::reuse_address(true));
         if(ec)
         {
-            fail(ec, "set_option");
+            LCAT(cat_).error("%s: set_option() failed; error = [%s]", __FUNCTION__, ec.message().c_str());
             return;
         }
 
@@ -78,7 +94,7 @@ public:
         acceptor_.bind(endpoint, ec);
         if(ec)
         {
-            fail(ec, "bind");
+            LCAT(cat_).error("%s: bind() failed; error = [%s]", __FUNCTION__, ec.message().c_str());
             return;
         }
 
@@ -87,7 +103,7 @@ public:
             boost::asio::socket_base::max_listen_connections, ec);
         if(ec)
         {
-            fail(ec, "listen");
+            LCAT(cat_).error("%s: listen() failed; error = [%s]", __FUNCTION__, ec.message().c_str());
             return;
         }
     }
@@ -117,12 +133,12 @@ public:
     {
         if(ec)
         {
-            fail(ec, "accept");
+            LCAT(cat_).error("%s: accept() failed; error = [%s]", __FUNCTION__, ec.message().c_str());
         }
         else
         {
             // Create the session and run it
-            std::make_shared<session>(std::move(socket_))->run();
+            std::make_shared<session>(std::move(socket_), cat_ + ".sess")->run();
         }
 
         // Accept another connection
@@ -132,17 +148,22 @@ public:
 
 //------------------------------------------------------------------------------
 
+static const std::string master_cat = "ccwp";
+
 int main(int argc, char* argv[])
 {
     // Check command line arguments.
     if (argc != 4)
     {
         std::cerr <<
-            "Usage: websocket-server-async <address> <port> <threads>\n" <<
+            argv[0] << " <address> <port> <threads>\n" <<
             "Example:\n" <<
-            "    websocket-server-async 0.0.0.0 8080 1\n";
+            "    " << argv[0] << " 0.0.0.0 8080 1\n";
         return EXIT_FAILURE;
     }
+
+    init_log("ccw_proxy.log", "./logs", 700, master_cat.c_str());
+
     auto const address = boost::asio::ip::make_address(argv[1]);
     auto const port = static_cast<unsigned short>(std::atoi(argv[2]));
     auto const threads = std::max<int>(1, std::atoi(argv[3]));
@@ -151,7 +172,7 @@ int main(int argc, char* argv[])
     boost::asio::io_context ioc{threads};
 
     // Create and launch a listening port
-    std::make_shared<listener>(ioc, tcp::endpoint{address, port})->run();
+    std::make_shared<listener>(ioc, tcp::endpoint{address, port}, master_cat + ".lsnr")->run();
 
     // Run the I/O service on the requested number of threads
     std::vector<std::thread> v;
@@ -165,4 +186,39 @@ int main(int argc, char* argv[])
     ioc.run();
 
     return EXIT_SUCCESS;
+}
+
+void init_log(const char * a_log_file, const char * a_log_dir, const int log_level, const char * logcat)
+{
+	static const char the_layout[] = "%d{%y-%m-%d %H:%M:%S.%l}| %-6p | %-15c | %m%n";
+
+	std::string log_file = a_log_file;
+	log_file.insert(0, "/");
+	log_file.insert(0, a_log_dir);
+
+    log4cpp::Layout * log_layout = NULL;
+    log4cpp::Appender * appender = new log4cpp::RollingFileAppender("rlf.appender", log_file.c_str(), 10*1024*1024, 5);
+
+    bool pattern_layout = false;
+    try
+    {
+        log_layout = new log4cpp::PatternLayout();
+        ((log4cpp::PatternLayout *)log_layout)->setConversionPattern(the_layout);
+        appender->setLayout(log_layout);
+        pattern_layout = true;
+    }
+    catch(...)
+    {
+        pattern_layout = false;
+    }
+
+    if(!pattern_layout)
+    {
+        log_layout = new log4cpp::BasicLayout();
+        appender->setLayout(log_layout);
+    }
+
+    LCAT(logcat).addAppender(appender);
+    LCAT(logcat).setPriority((log4cpp::Priority::PriorityLevel)log_level);
+    LCAT(logcat).notice("log start");
 }

@@ -16,14 +16,17 @@
 using tcp = boost::asio::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
 namespace websocket = boost::beast::websocket;  // from <boost/beast/websocket.hpp>
 
-void fail(boost::system::error_code ec, char const* what);
+#include <log4cpp/Category.hh>
+
+#define LCAT(X)		log4cpp::Category::getInstance(X)
+
 //------------------------------------------------------------------------------
 
 #include "session.h"
 
 // Take ownership of the socket
-session::session(tcp::socket socket)
-: ws_(std::move(socket)), strand_(ws_.get_executor())
+session::session(tcp::socket socket, const std::string & cat)
+: ws_(std::move(socket)), strand_(ws_.get_executor()), cat_(cat)
 {
 }
 
@@ -31,7 +34,7 @@ void session::run()
 {
 	// Accept the websocket handshake
 	ws_.async_accept(
-		boost::asio::bind_executor(
+			boost::asio::bind_executor(
 			strand_,
 			std::bind(
 				&session::on_accept,
@@ -42,7 +45,7 @@ void session::run()
 void session::on_accept(boost::system::error_code ec)
 {
 	if(ec)
-		return fail(ec, "accept");
+		LCAT(cat_).error("%s: accept() failed; error = [%s]", __FUNCTION__, ec.message().c_str());
 
 	// Read a message
 	do_read();
@@ -71,7 +74,7 @@ void session::on_read(boost::system::error_code ec, std::size_t bytes_transferre
 		return;
 
 	if(ec)
-		fail(ec, "read");
+		LCAT(cat_).error("%s: read() failed; error = [%s]", __FUNCTION__, ec.message().c_str());
 
 	// Echo the message
 	ws_.text(ws_.got_text());
@@ -91,7 +94,10 @@ void session::on_write(boost::system::error_code ec, std::size_t bytes_transferr
 	boost::ignore_unused(bytes_transferred);
 
 	if(ec)
-		return fail(ec, "write");
+	{
+		LCAT(cat_).error("%s: write() failed; error = [%s]", __FUNCTION__, ec.message().c_str());
+		return;
+	}
 
 	// Clear the buffer
 	buffer_.consume(buffer_.size());

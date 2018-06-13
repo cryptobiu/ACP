@@ -8,8 +8,10 @@ class session : public std::enable_shared_from_this<session>
     boost::asio::strand<boost::asio::io_context::executor_type> strand_;
     boost::beast::multi_buffer buffer_;
 
+    std::string cat_;
+
 public:
-    explicit session(tcp::socket socket);
+    explicit session(tcp::socket socket, const std::string & cat);
 
     // Start the asynchronous operation
     void run();
