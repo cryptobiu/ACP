@@ -18,6 +18,8 @@ namespace websocket = boost::beast::websocket;  // from <boost/beast/websocket.h
 
 #include <log4cpp/Category.hh>
 
+#include "comm_client.h"
+
 #define LCAT(X)		log4cpp::Category::getInstance(X)
 
 //------------------------------------------------------------------------------
@@ -26,7 +28,7 @@ namespace websocket = boost::beast::websocket;  // from <boost/beast/websocket.h
 
 // Take ownership of the socket
 session::session(tcp::socket socket, const std::string & cat)
-: ws_(std::move(socket)), strand_(ws_.get_executor()), cat_(cat)
+: ws_(std::move(socket)), strand_(ws_.get_executor()), cat_(cat), cc_(NULL)
 {
 }
 

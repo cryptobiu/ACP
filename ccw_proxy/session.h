@@ -1,6 +1,8 @@
 
 #pragma once
 
+class comm_client;
+
 // Echoes back all received WebSocket messages
 class session : public std::enable_shared_from_this<session>
 {
@@ -9,6 +11,7 @@ class session : public std::enable_shared_from_this<session>
     boost::beast::multi_buffer buffer_;
 
     std::string cat_;
+    comm_client * cc_;
 
 public:
     explicit session(tcp::socket socket, const std::string & cat);
