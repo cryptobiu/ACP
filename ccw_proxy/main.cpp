@@ -42,7 +42,6 @@ namespace websocket = boost::beast::websocket;  // from <boost/beast/websocket.h
 
 void init_log(const char * a_log_file, const char * a_log_dir, const int log_level, const char * logcat);
 
-#include "session.h"
 #include "listener.h"
 
 static const std::string master_cat = "ccwp";
