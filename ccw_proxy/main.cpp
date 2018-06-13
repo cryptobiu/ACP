@@ -40,6 +40,8 @@ namespace websocket = boost::beast::websocket;  // from <boost/beast/websocket.h
 
 #define LCAT(X)		log4cpp::Category::getInstance(X)
 
+void get_options(int argc, char *argv[], std::string & address, u_int16_t & port, unsigned int & threads_num);
+void show_usage(const char * prog);
 void init_log(const char * a_log_file, const char * a_log_dir, const int log_level, const char * logcat);
 
 #include "listener.h"
@@ -48,32 +50,24 @@ static const std::string master_cat = "ccwp";
 
 int main(int argc, char* argv[])
 {
-    // Check command line arguments.
-    if (argc != 4)
-    {
-        std::cerr <<
-            argv[0] << " <address> <port> <threads>\n" <<
-            "Example:\n" <<
-            "    " << argv[0] << " 0.0.0.0 8080 1\n";
-        return EXIT_FAILURE;
-    }
+	std::string service_address;
+	u_int16_t port = 0;
+	unsigned int threads_num = 1;
 
-    init_log("ccw_proxy.log", "./logs", 700, master_cat.c_str());
+	get_options(argc, argv, service_address, port, threads_num);
 
-    auto const address = boost::asio::ip::make_address(argv[1]);
-    auto const port = static_cast<unsigned short>(std::atoi(argv[2]));
-    auto const threads = std::max<int>(1, std::atoi(argv[3]));
+    auto const address = boost::asio::ip::make_address(service_address);
 
     // The io_context is required for all I/O
-    boost::asio::io_context ioc{threads};
+    boost::asio::io_context ioc{(int)threads_num};
 
     // Create and launch a listening port
     std::make_shared<listener>(ioc, tcp::endpoint{address, port}, master_cat + ".lsnr")->run();
 
     // Run the I/O service on the requested number of threads
     std::vector<std::thread> v;
-    v.reserve(threads - 1);
-    for(auto i = threads - 1; i > 0; --i)
+    v.reserve((int)threads_num - 1);
+    for(auto i = (int)threads_num - 1; i > 0; --i)
         v.emplace_back(
         [&ioc]
         {
@@ -82,6 +76,47 @@ int main(int argc, char* argv[])
     ioc.run();
 
     return EXIT_SUCCESS;
+}
+
+void get_options(int argc, char *argv[], std::string & address, u_int16_t & port, unsigned int & threads_num)
+{
+	if(argc == 1)
+	{
+		show_usage(argv[0]);
+		exit(0);
+	}
+	int opt;
+	while ((opt = getopt(argc, argv, "ha:p:n:")) != -1)
+	{
+		switch (opt)
+		{
+		case 'h':
+			show_usage(argv[0]);
+			exit(0);
+		case 'a':
+			address = optarg;
+			break;
+		case 'p':
+			port = (u_int16_t)strtol(optarg, NULL, 10);
+			break;
+		case 'n':
+			threads_num = (unsigned int)strtol(optarg, NULL, 10);
+			break;
+		default:
+			std::cerr << "Invalid program arguments." << std::endl;
+			show_usage(argv[0]);
+			exit(__LINE__);
+		}
+	}
+}
+
+void show_usage(const char * prog)
+{
+	std::cout << "Usage:" << std::endl;
+	std::cout << prog << "   [ OPTIONS ]" << std::endl;
+	std::cout << "-a   web socket service address" << std::endl;
+	std::cout << "-p   web socket service port" << std::endl;
+	std::cout << "-n   number of threads" << std::endl;
 }
 
 void init_log(const char * a_log_file, const char * a_log_dir, const int log_level, const char * logcat)
