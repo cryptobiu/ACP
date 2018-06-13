@@ -45,11 +45,6 @@ void init_log(const char * a_log_file, const char * a_log_dir, const int log_lev
 #include "session.h"
 #include "listener.h"
 
-//------------------------------------------------------------------------------
-
-
-//------------------------------------------------------------------------------
-
 static const std::string master_cat = "ccwp";
 
 int main(int argc, char* argv[])

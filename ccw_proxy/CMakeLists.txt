@@ -10,6 +10,7 @@ INCLUDE_DIRECTORIES(
 
 set(SOURCE_FILES
 	main.cpp
+	listener.cpp
 	session.cpp
 )
 
