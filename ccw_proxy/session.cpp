@@ -1,6 +1,7 @@
 
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
+#include <boost/beast/core/buffers_to_string.hpp>
 #include <boost/asio/bind_executor.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/asio/ip/tcp.hpp>
@@ -12,6 +13,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <iomanip>
 
 using tcp = boost::asio::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
 namespace websocket = boost::beast::websocket;  // from <boost/beast/websocket.hpp>
@@ -77,6 +79,17 @@ void session::on_read(boost::system::error_code ec, std::size_t bytes_transferre
 
 	if(ec)
 		LCAT(cat_).error("%s: read() failed; error = [%s]", __FUNCTION__, ec.message().c_str());
+
+	std::string str = buffers_to_string(buffer_.data());
+	if(!ws_.got_text())
+	{
+		std::stringstream ss;
+		ss << std::hex << std::setfill('0');
+		for(size_t i = 0; i < str.size(); ++i)
+		    ss << std::setw(2) << static_cast<unsigned>(str[i]);
+		str = ss.str();
+	}
+	LCAT(cat_).debug("%s: received %s: [%s]", __FUNCTION__, ((ws_.got_text())? "txt": "bin"), str.c_str());
 
 	// Echo the message
 	ws_.text(ws_.got_text());
