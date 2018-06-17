@@ -1,6 +1,5 @@
 
 #include <unistd.h>
-#include <pthread.h>
 #include <semaphore.h>
 #include <memory.h>
 
