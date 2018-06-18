@@ -24,5 +24,9 @@ ssize_t splice(int fd_in, loff_t *off_in, int fd_out, loff_t *off_out, size_t le
 	return sendfile(fd_out, fd_in, off_in, len);
 }
 
+int pthread_timedjoin_np(pthread_t thread, void **retval, const struct timespec *abstime)
+{
+	return pthread_join(thread, retval);
+}
 
 #endif //__APPLE__
