@@ -328,7 +328,11 @@ int comm_client_tcp_mesh::start_service()
     }
 	lc_debug("%s: self service socket created; fd = %d.", __FUNCTION__, self.sockfd);
 
-	if (0 != bind(self.sockfd, (const sockaddr *)&self.inet_addr, (socklen_t)sizeof(struct sockaddr_in)))
+	//override the file configured address with addr-any
+	struct sockaddr_in my_inet_addr = self.inet_addr;
+	my_inet_addr.sin_addr.s_addr = INADDR_ANY;
+
+	if (0 != bind(self.sockfd, (const sockaddr *)&my_inet_addr, (socklen_t)sizeof(struct sockaddr_in)))
 	{
         int errcode = errno;
         char errmsg[256];

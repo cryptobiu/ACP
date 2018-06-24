@@ -27,7 +27,7 @@ public:
 		u_int16_t port;
 
 		__service()
-		: port((u_int16_t)-1)
+		: ip("0.0.0.0"), port((u_int16_t)-1)
 		{}
 	}service_t;
 

@@ -247,45 +247,6 @@ int ac_protocol::run_ac_protocol(const size_t id, const size_t parties, const ch
 	return 0;
 }
 
-/*
-bool ac_protocol::handle_comm_event()
-{
-	bool had_comm_evts = false;
-	comm_evt * pevt = NULL;
-	int errcode;
-	struct timespec to;
-	clock_gettime(CLOCK_REALTIME, &to);
-	to.tv_sec += 1;
-	if(0 == (errcode = pthread_mutex_timedlock(&m_q_lock, &to)))
-	{
-		if(!m_comm_q.empty())
-		{
-			pevt = *m_comm_q.begin();
-			m_comm_q.pop_front();
-		}
-
-		if(0 != (errcode = pthread_mutex_unlock(&m_q_lock)))
-		{
-			char errmsg[256];
-			lc_error("%s: pthread_mutex_unlock() failed with error %d : [%s].",
-					__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
-			exit(__LINE__);
-		}
-	}
-	else
-	{
-		char errmsg[256];
-		lc_error("%s: pthread_mutex_timedlock() failed with error %d : [%s].",
-				__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
-		exit(__LINE__);
-	}
-
-	had_comm_evts = (NULL != pevt);
-	handle_comm_event(pevt);
-	delete pevt;
-	return had_comm_evts;
-}
-*/
 bool ac_protocol::handle_comm_events()
 {
 	bool had_comm_evts = false;
