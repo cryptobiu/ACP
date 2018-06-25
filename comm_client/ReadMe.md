@@ -28,6 +28,7 @@ A recommended example of such an implementation can be found at [ACP cointoss].
 
 ### Asynchronous Communication Protocol Implementation
 Suppose we want to implement a protocol that uses asynchronous communication. The first thing we'll do is to derive our protocol class from ac_protocol.
+
 ```c
 class my_ac_protocol : public ac_protocol
 {
@@ -36,7 +37,28 @@ public:
     virtual ~my_ac_protocol();
 }
 ```
+
 The constructor parameters are required to be passed on to the ac_protocol constructor in order to create the comm_client object.
+Once the class is created, a protocol specific information for each and every peer party and perhaps generic information must be added to the class to preserve the information between rounds and accumulate the computation result.
+
+```c
+class my_ac_protocol : public ac_protocol
+{
+    typedef struct
+    {
+        size_t party_id;
+        //protocol specific information...
+    }party_state_information_t;
+    
+    std::map< size_t , party_state_information_t > m_party_info_map;
+    //generic protocol specific information...
+    
+public:
+    my_ac_protocol(comm_client_factory::client_type_t cc_type, comm_client::cc_args_t * cc_args);
+    virtual ~my_ac_protocol();
+}
+```
+
 The next thing we need to do is to implement the pure virtual methods of ac_protocol:
 - __*handle_party_conn(const size_t party_id, const bool connected)*__ - called in order to process a report from the communication client regarding a connection/desconnection of a peer party.
 - __*handle_party_msg(const size_t party_id, std::vector< u_int8_t > & msg)*__ - called in order to process an incoming network message from a peer party.
@@ -44,12 +66,22 @@ The next thing we need to do is to implement the pure virtual methods of ac_prot
 - __*run_around()*__ - called during a protocol round; returns false unless we're ready to advance to the next round.
 - __*round_up()*__ - called to advance to the next round; returns true for success.
 - __*post_run()*__ - called after the last round to allow for resource cleanup.
+
 ```c
 class my_ac_protocol : public ac_protocol
 {
+    typedef struct
+    {
+        size_t party_id;
+        //protocol specific information...
+    }party_state_information_t;
+    
+    std::map< size_t , party_state_information_t > m_party_info_map;
+    //generic protocol specific information...
+
+    //ac_protocol overrides    
 	void handle_party_conn(const size_t party_id, const bool connected);
 	void handle_party_msg(const size_t party_id, std::vector< u_int8_t > & msg);
-
 	int pre_run();
 	bool run_around();
 	bool round_up();
@@ -59,6 +91,7 @@ public:
     virtual ~my_ac_protocol();
 }
 ```
+The *pre_run()* and *post_run()* can be used to initialize and terminate (respectively) the party/generic protocol specific information data structures. The other ac_protocol overrides are supposed to either add information to the party/generic protocol specific information or trigger protocol specific result computation.
 
 [//]: # 
-   [ACP cointoss]: <https://github.com/cryptobiu/ACP/tree/master/coin_toss>
+   [ACP cointoss]: <https://github.com/cryptobiu/ACP/blob/master/coin_toss/cc_coin_toss.h>
