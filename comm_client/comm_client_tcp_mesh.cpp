@@ -29,7 +29,6 @@
 
 #include <event2/event.h>
 
-#include "subs_for_macosx.h"
 #include "comm_client.h"
 #include "comm_client_tcp_mesh.h"
 #include "comm_client_cb_api.h"

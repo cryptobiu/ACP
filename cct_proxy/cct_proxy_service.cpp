@@ -122,14 +122,13 @@ int cct_proxy_service::start_tcp_svc()
 		 LC.debug("%s: socket fd %d created.", __FUNCTION__, m_svc_sock);
 
 	struct sockaddr_in service_address;
-	/*
-	if (inet_aton(m_svc.ip.c_str(), &service_address.sin_addr) == 0) {
+	if (inet_aton(m_svc.ip.c_str(), &service_address.sin_addr) == 0)
+	{
 		LC.error("%s: invalid service address [%s].", __FUNCTION__, m_svc.ip.c_str());
 		close(m_svc_sock);
 		m_svc_sock = -1;
 		return -1;
-	}*/
-    service_address.sin_addr.s_addr = htonl (INADDR_ANY);
+	}
 
 	service_address.sin_port = htons(m_svc.port);
 	service_address.sin_family = AF_INET;

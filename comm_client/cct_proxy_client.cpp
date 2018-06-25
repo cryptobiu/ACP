@@ -26,7 +26,6 @@
 
 #include <event2/event.h>
 
-#include "subs_for_macosx.h"
 #include "comm_client.h"
 #include "cct_proxy_client.h"
 #include "cc_proxy_protocol.h"

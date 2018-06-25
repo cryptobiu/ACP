@@ -20,7 +20,6 @@
 #define lc_info(...) log4cpp::Category::getInstance(m_logcat).info(__VA_ARGS__)
 #define lc_debug(...) log4cpp::Category::getInstance(m_logcat).debug(__VA_ARGS__)
 
-#include "subs_for_macosx.h"
 #include "comm_client.h"
 #include "comm_client_cb_api.h"
 
