@@ -9,6 +9,7 @@ INCLUDE_DIRECTORIES(
 
 set(SOURCE_FILES
 	cc_coin_toss.cpp
+	cc_udp_test.cpp
 	coin_toss_test.cpp
 	coin_toss_tester.cpp
 )

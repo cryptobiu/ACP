@@ -15,19 +15,6 @@
 #include <sys/socket.h>
 #include <sys/uio.h>
 
-#ifdef __ANDROID__
-
-#include <android/log.h>
-
-#define lc_fatal(...) __android_log_print(ANDROID_LOG_FATAL,m_logcat.c_str(),__VA_ARGS__)
-#define lc_error(...) __android_log_print(ANDROID_LOG_ERROR,m_logcat.c_str(),__VA_ARGS__)
-#define lc_warn(...) __android_log_print(ANDROID_LOG_WARN,m_logcat.c_str(),__VA_ARGS__)
-#define lc_notice(...) __android_log_print(ANDROID_LOG_INFO,m_logcat.c_str(),__VA_ARGS__)
-#define lc_info(...) __android_log_print(ANDROID_LOG_INFO,m_logcat.c_str(),__VA_ARGS__)
-#define lc_debug(...) __android_log_print(ANDROID_LOG_DEBUG,m_logcat.c_str(),__VA_ARGS__)
-
-#else
-
 #include <log4cpp/Category.hh>
 
 #define lc_fatal(...) log4cpp::Category::getInstance(m_logcat).error(__VA_ARGS__)
@@ -37,10 +24,9 @@
 #define lc_info(...) log4cpp::Category::getInstance(m_logcat).info(__VA_ARGS__)
 #define lc_debug(...) log4cpp::Category::getInstance(m_logcat).debug(__VA_ARGS__)
 
-#endif
-
 #include <event2/event.h>
 
+#include "subs_for_macosx.h"
 #include "comm_client.h"
 #include "cct_proxy_client.h"
 #include "cc_proxy_protocol.h"

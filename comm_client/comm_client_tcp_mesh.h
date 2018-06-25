@@ -23,7 +23,6 @@ class comm_client_tcp_mesh : public comm_client
 	void run();
 	void set_syslog_name();
 	int load_peers(const unsigned int peer_count);
-	int parse_address(const char * address, std::string & ip, u_int16_t & port, struct sockaddr_in & sockaddr);
 	int insure_resource_limits();
 	int start_service();
 	int set_accept();
