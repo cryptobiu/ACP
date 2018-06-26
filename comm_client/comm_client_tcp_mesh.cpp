@@ -327,6 +327,17 @@ int comm_client_tcp_mesh::start_service()
     }
 	lc_debug("%s: self service socket created; fd = %d.", __FUNCTION__, self.sockfd);
 
+	int socket_address_reuse = 1;
+	if(0 != setsockopt(self.sockfd, SOL_SOCKET, SO_REUSEADDR, &socket_address_reuse, sizeof(int)))
+	{
+        int errcode = errno;
+        char errmsg[256];
+        lc_error("%s: setsockopt(SO_REUSEADDR) failed with error %d : [%s].",
+        		__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
+        return -1;
+	}
+	lc_debug("%s: self service socket address reuse option set.", __FUNCTION__);
+
 	//override the file configured address with addr-any
 	struct sockaddr_in my_inet_addr = self.inet_addr;
 	my_inet_addr.sin_addr.s_addr = INADDR_ANY;
