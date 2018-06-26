@@ -42,8 +42,8 @@ int main(int argc, char *argv[]) {
 
 	std::cout << "!!!Hello World!!!" << std::endl; // prints !!!Hello World!!!
 
-	//run_comm_tcp_mesh_client_test_fork(parties, conf_file, rounds, log_level);
-	run_comm_tcp_proxy_client_test_fork(parties, conf_file, rounds, log_level);
+	run_comm_tcp_mesh_client_test_fork(parties, conf_file, rounds, log_level);
+	//run_comm_tcp_proxy_client_test_fork(parties, conf_file, rounds, log_level);
 
 	return 0;
 }

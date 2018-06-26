@@ -44,6 +44,7 @@ public:
 	virtual void stop();
 
 	virtual int send(const unsigned int dst_id, const unsigned char * msg, const size_t size) = 0;
+	virtual int broadcast(const unsigned char * msg, const size_t size);
 
 	friend void * comm_client_proc(void * arg);
 };

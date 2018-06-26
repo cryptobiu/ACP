@@ -189,3 +189,14 @@ int comm_client::parse_address(const char * address, std::string & ip, u_int16_t
 	}
 	return -1;
 }
+
+int comm_client::broadcast(const unsigned char * msg, const size_t size)
+{
+	for(unsigned int i = 0; i < m_peer_count; ++i)
+	{
+		if(m_id == i) continue;
+		if(0 != send(i, msg, size))
+			return -1;
+	}
+	return 0;
+}
