@@ -91,5 +91,12 @@ public:
 ```
 The *pre_run()* and *post_run()* can be used to initialize and terminate (respectively) the party/generic protocol specific information data structures. The other ac_protocol overrides are supposed to either add information to the party/generic protocol specific information or trigger protocol specific result computation.
 
+To run the protocol the ac_protocol::run_ac_protocol(...) must be called with the following arguments:
+- const size_t __*id*__ - the party identifier of self.
+- const size_t __*parties*__ - the number of paticipating parties.
+- const char * __*conf_file*__ - an address file for all parties, in numerical order, in the form *ip-address:port*.
+- const size_t __*idle_timeout_seconds*__ - the maximum number of seconds with no network traffic, after which the protocol is aborted.
+
+
 [//]: # 
    [ACP cointoss]: <https://github.com/cryptobiu/ACP/blob/master/coin_toss/cc_coin_toss.h>
