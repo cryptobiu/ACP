@@ -30,11 +30,11 @@ A recommended example of such an implementation can be found at [ACP cointoss].
 Suppose we want to implement a protocol that uses asynchronous communication. The first thing we'll do is to derive our protocol class from ac_protocol.
 
 ```c
-class my_ac_protocol : public ac_protocol
-{
+class my_ac_protocol: public ac_protocol {
 public:
-    my_ac_protocol(comm_client_factory::client_type_t cc_type, comm_client::cc_args_t * cc_args);
-    virtual ~my_ac_protocol();
+	my_ac_protocol(comm_client_factory::client_type_t cc_type,
+			comm_client::cc_args_t * cc_args);
+	virtual ~my_ac_protocol();
 }
 ```
 
@@ -42,20 +42,19 @@ The constructor parameters are required to be passed on to the ac_protocol const
 Once the class is created, a protocol specific information for each and every peer party and perhaps generic information must be added to the class to preserve the information between rounds and accumulate the computation result.
 
 ```c
-class my_ac_protocol : public ac_protocol
-{
-    typedef struct
-    {
-        size_t party_id;
-        //protocol specific information...
-    }party_state_information_t;
-    
-    std::map< size_t , party_state_information_t > m_party_info_map;
-    //generic protocol specific information...
-    
+class my_ac_protocol: public ac_protocol {
+	typedef struct {
+		size_t party_id;
+		//protocol specific information...
+	} party_state_information_t;
+
+	std::map<size_t, party_state_information_t> m_party_info_map;
+	//generic protocol specific information...
+
 public:
-    my_ac_protocol(comm_client_factory::client_type_t cc_type, comm_client::cc_args_t * cc_args);
-    virtual ~my_ac_protocol();
+	my_ac_protocol(comm_client_factory::client_type_t cc_type,
+			comm_client::cc_args_t * cc_args);
+	virtual ~my_ac_protocol();
 }
 ```
 
@@ -68,30 +67,36 @@ The next thing we need to do is to implement the pure virtual methods of ac_prot
 - __*post_run()*__ - called after the last round to allow for resource cleanup.
 
 ```c
-class my_ac_protocol : public ac_protocol
-{
-    typedef struct
-    {
-        size_t party_id;
-        //protocol specific information...
-    }party_state_information_t;
-    
-    std::map< size_t , party_state_information_t > m_party_info_map;
-    //generic protocol specific information...
+class my_ac_protocol: public ac_protocol {
+	typedef struct {
+		size_t party_id;
+		//protocol specific information...
+	} party_state_information_t;
 
-    //ac_protocol overrides    
+	std::map<size_t, party_state_information_t> m_party_info_map;
+	//generic protocol specific information...
+
+	//ac_protocol overrides    
 	void handle_party_conn(const size_t party_id, const bool connected);
-	void handle_party_msg(const size_t party_id, std::vector< u_int8_t > & msg);
+	void handle_party_msg(const size_t party_id, std::vector<u_int8_t> & msg);
 	int pre_run();
 	bool run_around();
 	bool round_up();
 	int post_run();
 public:
-    my_ac_protocol(comm_client_factory::client_type_t cc_type, comm_client::cc_args_t * cc_args);
-    virtual ~my_ac_protocol();
+	my_ac_protocol(comm_client_factory::client_type_t cc_type,
+			comm_client::cc_args_t * cc_args);
+	virtual ~my_ac_protocol();
 }
 ```
 The *pre_run()* and *post_run()* can be used to initialize and terminate (respectively) the party/generic protocol specific information data structures. The other ac_protocol overrides are supposed to either add information to the party/generic protocol specific information or trigger protocol specific result computation.
+
+To run the protocol the ac_protocol::run_ac_protocol(...) must be called with the following arguments:
+- const size_t __*id*__ - the party identifier of self.
+- const size_t __*parties*__ - the number of paticipating parties.
+- const char * __*conf_file*__ - an address file for all parties, in numerical order, in the form *ip-address:port*.
+- const size_t __*idle_timeout_seconds*__ - the maximum number of seconds with no network traffic, after which the protocol is aborted.
+
 
 [//]: # 
    [ACP cointoss]: <https://github.com/cryptobiu/ACP/blob/master/coin_toss/cc_coin_toss.h>
