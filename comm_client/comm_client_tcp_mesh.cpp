@@ -354,7 +354,7 @@ int comm_client_tcp_mesh::start_service()
 	}
 	lc_debug("%s: socket bound to address %s:%hu.", __FUNCTION__, self.ip.c_str(), self.port);
 
-	if (0 != listen(self.sockfd, 10))
+	if (0 != listen(self.sockfd, this->m_peer_count))
 	{
         int errcode = errno;
         char errmsg[256];
