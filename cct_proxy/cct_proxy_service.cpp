@@ -121,6 +121,18 @@ int cct_proxy_service::start_tcp_svc()
 	else
 		 LC.debug("%s: socket fd %d created.", __FUNCTION__, m_svc_sock);
 
+	int socket_address_reuse = 1;
+	if(0 != setsockopt(m_svc_sock, SOL_SOCKET, SO_REUSEADDR, &socket_address_reuse, sizeof(int)))
+	{
+        int errcode = errno;
+        char errmsg[256];
+        LC.error("%s: setsockopt(SO_REUSEADDR) failed with error %d : [%s].",
+        		__FUNCTION__, errcode, strerror_r(errcode, errmsg, 256));
+        return -1;
+	}
+	else
+		LC.debug("%s: self service socket address reuse option set.", __FUNCTION__);
+
 	struct sockaddr_in service_address;
 	if (inet_aton(m_svc.ip.c_str(), &service_address.sin_addr) == 0)
 	{
