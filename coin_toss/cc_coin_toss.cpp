@@ -99,18 +99,17 @@ int cc_coin_toss::generate_data(const size_t id, std::vector<u_int8_t> & seed, s
 int cc_coin_toss::commit_seed(const size_t id, const std::vector<u_int8_t> & seed, std::vector<u_int8_t> & commit) const
 {
 	int result = -1;
-	EVP_MD_CTX ctx;
-	EVP_MD_CTX_init(&ctx);
+	EVP_MD_CTX * ctx = EVP_MD_CTX_new();
 	const EVP_MD * md = EVP_sha256();
-	if(EVP_DigestInit_ex(&ctx, md, NULL))
+	if(EVP_DigestInit_ex(ctx, md, NULL))
 	{
-		if(EVP_DigestUpdate(&ctx, &id, sizeof(id)))
+		if(EVP_DigestUpdate(ctx, &id, sizeof(id)))
 		{
-			if(EVP_DigestUpdate(&ctx, seed.data(), seed.size()))
+			if(EVP_DigestUpdate(ctx, seed.data(), seed.size()))
 			{
 				unsigned int digest_size = 0;
 				commit.resize(SHA256_BYTE_SIZE);
-				if(EVP_DigestFinal_ex(&ctx, commit.data(), &digest_size))
+				if(EVP_DigestFinal_ex(ctx, commit.data(), &digest_size))
 				{
 					if(SHA256_BYTE_SIZE == digest_size)
 					{
@@ -131,7 +130,7 @@ int cc_coin_toss::commit_seed(const size_t id, const std::vector<u_int8_t> & see
 	}
 	else
 		LC.error("%s: EVP_DigestInit_ex() failed.", __FUNCTION__);
-	EVP_MD_CTX_cleanup(&ctx);
+	EVP_MD_CTX_free(ctx);
 	return result;
 }
 
